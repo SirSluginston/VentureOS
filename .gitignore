@@ -1,0 +1,19 @@
+﻿# Dependencies
+node_modules/
+
+# Build artifacts
+*.zip
+
+# Deployment scripts (local use)
+deploy-*.sh
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
