@@ -164,45 +164,74 @@ export async function acquireSyncLock() {
   const lockKey = '_progress/sync-lock.json';
   const lockTimeout = 20 * 60 * 1000; // 20 minutes (longer than Lambda timeout)
   
+  // Try to acquire lock atomically using conditional PutObject
+  // If-None-Match: * means "only create if it doesn't exist"
+  // This prevents race conditions where two instances both try to acquire at once
   try {
-    // Try to get existing lock
-    const response = await s3Client.send(new GetObjectCommand({
+    await s3Client.send(new PutObjectCommand({
       Bucket: S3_BUCKET,
       Key: lockKey,
+      Body: JSON.stringify({
+        lockedAt: new Date().toISOString(),
+        lockedBy: 'daily-sync',
+      }),
+      ContentType: 'application/json',
+      // Atomic: only create if it doesn't exist
+      IfNoneMatch: '*',
     }));
     
-    const body = await response.Body.transformToString();
-    const lock = JSON.parse(body);
-    
-    // Check if lock is still valid (not expired)
-    const lockTime = new Date(lock.lockedAt).getTime();
-    const now = Date.now();
-    
-    if (now - lockTime < lockTimeout) {
-      // Lock is still valid, another instance is running
-      return false;
-    }
-    
-    // Lock expired, we can take it
+    // Successfully acquired lock
+    return true;
   } catch (error) {
-    if (error.name !== 'NoSuchKey' && error.$metadata?.httpStatusCode !== 404) {
-      throw error;
+    // If conditional check failed, lock already exists
+    if (error.name === 'PreconditionFailed' || error.$metadata?.httpStatusCode === 412) {
+      // Lock exists - check if it's expired
+      try {
+        const response = await s3Client.send(new GetObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: lockKey,
+        }));
+        
+        const body = await response.Body.transformToString();
+        const lock = JSON.parse(body);
+        
+        const lockTime = new Date(lock.lockedAt).getTime();
+        const now = Date.now();
+        
+        if (now - lockTime < lockTimeout) {
+          // Lock is still valid, another instance is running
+          return false;
+        }
+        
+        // Lock expired - try to steal it (delete and recreate)
+        // This is still a race condition, but less likely since we check expiration
+        await s3Client.send(new DeleteObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: lockKey,
+        }));
+        
+        // Try again to acquire
+        await s3Client.send(new PutObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: lockKey,
+          Body: JSON.stringify({
+            lockedAt: new Date().toISOString(),
+            lockedBy: 'daily-sync',
+          }),
+          ContentType: 'application/json',
+          IfNoneMatch: '*',
+        }));
+        
+        return true;
+      } catch (getError) {
+        // Error reading lock or re-acquiring - assume locked
+        return false;
+      }
     }
-    // No lock exists, we can acquire it
+    
+    // Other errors - assume we can't acquire lock
+    return false;
   }
-  
-  // Acquire lock
-  await s3Client.send(new PutObjectCommand({
-    Bucket: S3_BUCKET,
-    Key: lockKey,
-    Body: JSON.stringify({
-      lockedAt: new Date().toISOString(),
-      lockedBy: 'daily-sync',
-    }),
-    ContentType: 'application/json',
-  }));
-  
-  return true;
 }
 
 /**
@@ -231,45 +260,74 @@ export async function acquireRebuildLock() {
   const lockKey = '_progress/rebuild-lock.json';
   const lockTimeout = 20 * 60 * 1000; // 20 minutes (longer than Lambda timeout)
   
+  // Try to acquire lock atomically using conditional PutObject
+  // If-None-Match: * means "only create if it doesn't exist"
+  // This prevents race conditions where two instances both try to acquire at once
   try {
-    // Try to get existing lock
-    const response = await s3Client.send(new GetObjectCommand({
+    await s3Client.send(new PutObjectCommand({
       Bucket: S3_BUCKET,
       Key: lockKey,
+      Body: JSON.stringify({
+        lockedAt: new Date().toISOString(),
+        lockedBy: 'stats-rebuild',
+      }),
+      ContentType: 'application/json',
+      // Atomic: only create if it doesn't exist
+      IfNoneMatch: '*',
     }));
     
-    const body = await response.Body.transformToString();
-    const lock = JSON.parse(body);
-    
-    // Check if lock is still valid (not expired)
-    const lockTime = new Date(lock.lockedAt).getTime();
-    const now = Date.now();
-    
-    if (now - lockTime < lockTimeout) {
-      // Lock is still valid, another instance is running
-      return false;
-    }
-    
-    // Lock expired, we can take it
+    // Successfully acquired lock
+    return true;
   } catch (error) {
-    if (error.name !== 'NoSuchKey' && error.$metadata?.httpStatusCode !== 404) {
-      throw error;
+    // If conditional check failed, lock already exists
+    if (error.name === 'PreconditionFailed' || error.$metadata?.httpStatusCode === 412) {
+      // Lock exists - check if it's expired
+      try {
+        const response = await s3Client.send(new GetObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: lockKey,
+        }));
+        
+        const body = await response.Body.transformToString();
+        const lock = JSON.parse(body);
+        
+        const lockTime = new Date(lock.lockedAt).getTime();
+        const now = Date.now();
+        
+        if (now - lockTime < lockTimeout) {
+          // Lock is still valid, another instance is running
+          return false;
+        }
+        
+        // Lock expired - try to steal it (delete and recreate)
+        // This is still a race condition, but less likely since we check expiration
+        await s3Client.send(new DeleteObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: lockKey,
+        }));
+        
+        // Try again to acquire
+        await s3Client.send(new PutObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: lockKey,
+          Body: JSON.stringify({
+            lockedAt: new Date().toISOString(),
+            lockedBy: 'stats-rebuild',
+          }),
+          ContentType: 'application/json',
+          IfNoneMatch: '*',
+        }));
+        
+        return true;
+      } catch (getError) {
+        // Error reading lock or re-acquiring - assume locked
+        return false;
+      }
     }
-    // No lock exists, we can acquire it
+    
+    // Other errors - assume we can't acquire lock
+    return false;
   }
-  
-  // Acquire lock
-  await s3Client.send(new PutObjectCommand({
-    Bucket: S3_BUCKET,
-    Key: lockKey,
-    Body: JSON.stringify({
-      lockedAt: new Date().toISOString(),
-      lockedBy: 'stats-rebuild',
-    }),
-    ContentType: 'application/json',
-  }));
-  
-  return true;
 }
 
 /**

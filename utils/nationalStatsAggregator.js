@@ -2,7 +2,7 @@
 // Aggregates national stats from state stats
 
 import { S3Client, ListObjectsV2Command, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getNationalPath, getStatsKey } from './s3PathHelper.js';
+import { getNationalPath, getStatePath, getStatsKey } from './s3PathHelper.js';
 
 const S3_BUCKET = process.env.S3_BUCKET || 'sirsluginston-ventureos-data';
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
