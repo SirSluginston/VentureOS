@@ -3,9 +3,18 @@ node_modules/
 
 # Build artifacts
 *.zip
+lambda-deploy/
+lambda-batch-package/
 
 # Deployment scripts (local use)
 deploy-*.sh
+deploy-*.ps1
+*.bat
+
+# Test artifacts
+test-event.json
+response.json
+test-output.parquet
 
 # Logs
 *.log
@@ -17,3 +26,10 @@ deploy-*.sh
 # OS
 .DS_Store
 Thumbs.db
+
+# Bedrock Configuration (SECRET - NEVER COMMIT)
+bedrock-production-config.json
+bedrock-production-config.js
+bedrock-secret.*
+.env.bedrock.*
+*bedrock*secret*
