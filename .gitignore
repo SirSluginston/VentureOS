@@ -8,6 +8,8 @@ lambda-batch-package/
 *-deploy/
 deploy-*/
 gold-sync-deploy/
+scripts/*-deploy/
+scripts/*-deploy-*/
 
 # Deployment scripts (local use)
 deploy-*.sh
