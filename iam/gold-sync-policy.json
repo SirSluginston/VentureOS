@@ -1,0 +1,49 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "S3TablesAccess",
+            "Effect": "Allow",
+            "Action": [
+                "s3tables:*"
+            ],
+            "Resource": [
+                "arn:aws:s3tables:us-east-1:611538926352:bucket/sirsluginston-ventureos-data-ocean",
+                "arn:aws:s3tables:us-east-1:611538926352:bucket/sirsluginston-ventureos-data-ocean/*"
+            ]
+        },
+        {
+            "Sid": "GlueAccess",
+            "Effect": "Allow",
+            "Action": [
+                "glue:GetDatabase",
+                "glue:GetTable",
+                "glue:GetPartitions"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "DynamoDBAccess",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:BatchWriteItem"
+            ],
+            "Resource": "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-Entities"
+        },
+        {
+            "Sid": "Logging",
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+
+
+
