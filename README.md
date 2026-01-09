@@ -1,75 +1,35 @@
 # VentureOS
 
-Unified backend infrastructure for SirSluginston Co. brands.
+VentureOS is the backend backbone for SirSluginston Co.'s pSEO projects. It handles data ingestion, AI enhancement (Bedrock), and API delivery.
 
-## Architecture
+## Structure
 
-- **Medallion Architecture**: Bronze (raw JSON) → Silver (Parquet) → Gold (aggregated stats)
-- **Data Lake**: AWS S3 Tables (Iceberg format) with DuckDB processing
-- **API**: Lambda functions behind API Gateway
+*   `api/` - API definitions and configurations.
+*   `iam/` - AWS IAM policies and role definitions.
+*   `infrastructure/` - AWS resource definitions (DynamoDB, S3, etc.).
+*   `lambdas/` - Source code for AWS Lambda functions.
+*   `scripts/` - Deployment and utility scripts.
+*   `utils/` - Shared utility functions (Parquet writers, Bedrock processors).
 
-## Directory Structure
+## Key Workflows
 
-```
-VentureOS/
-├── api/              # API Lambda handlers (config, admin, data)
-├── docs/             # Documentation and examples
-├── iam/              # IAM policy definitions
-├── infrastructure/   # Infrastructure as code (API Gateway, etc.)
-├── lambdas/          # Lambda function handlers
-├── scripts/          # Deployment and utility scripts
-├── tests/            # Test scripts and sample data
-└── utils/            # Shared utility functions
-```
+### 1. Data Ingestion (Bronze Layer)
+Raw data is ingested from government APIs into S3 (Bronze).
 
-## Lambda Functions
+### 2. AI Processing
+Bedrock batch jobs enrich the data with titles, descriptions, and tags.
 
-- **`ventureos-parquet-writer`** - Converts Bronze JSON to Silver Parquet
-- **`ventureos-consolidator`** - Moves data from Buffer to Archive
-- **`ventureos-query`** - Serves data from Parquet data lake
-- **`ventureos-api-config`** - Configuration API
-- **`ventureos-api-admin`** - Admin operations API
-- **`ventureos-api-data`** - Data query API
-- **`ventureos-daily-sync`** - Syncs recent data to DynamoDB
-- **`ventureos-stats-rebuild`** - Rebuilds Gold layer stats
+### 3. Normalization (Silver Layer)
+Data is normalized and written to S3 Tables (Iceberg) for querying.
+*   *Note: See `SYSTEM_OVERVIEW.md` for details on the dual-write buffer strategy.*
+
+### 4. API Serving (Gold Layer)
+Processed data is synced to DynamoDB for high-speed access by the frontend applications.
 
 ## Deployment
+Use the scripts in `scripts/` for deployment.
+*   `deploy-gold-sync.bat` - Deploys the Gold Sync Lambda.
+*   (Ensure AWS credentials are configured).
 
-Deployment scripts are in `scripts/`. Each Lambda has its own script (`deploy-*.bat` or `.sh`):
-
-```bash
-# Windows
-scripts\deploy-query-handler.bat
-
-# Linux/Mac
-bash scripts/deploy-stats-rebuild.sh
-```
-
-Scripts:
-1. Package the Lambda code
-2. Install dependencies (excluding native binaries provided by Layers)
-3. Create deployment zip
-4. Update Lambda function code
-
-## IAM Policies
-
-See `iam/` directory for policy definitions. Policies follow least-privilege principles.
-
-## Data Flow
-
-1. Raw data lands in S3 Bronze layer (`bronze/raw/{agency}/{timestamp}/`)
-2. `ventureos-parquet-writer` converts to Parquet in Silver Buffer (`silver/violations/buffer/ingest_date=YYYY-MM-DD/`)
-3. `ventureos-consolidator` moves to Archive (`silver/violations/archive/violation_year=YYYY/`)
-4. `ventureos-query` serves data from both Buffer and Archive
-5. Recent violations synced to DynamoDB for fast access
-
-## Testing
-
-Test scripts are in `tests/`. Use AWS CLI to invoke:
-
-```bash
-scripts\test-api-city.bat
-```
-
-See `tests/README.md` for more details.
-
+## Secrets
+Bedrock configurations (`bedrock-production-config.js`) are git-ignored.
