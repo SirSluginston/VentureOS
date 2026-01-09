@@ -28,9 +28,15 @@
             "Action": [
                 "dynamodb:PutItem",
                 "dynamodb:UpdateItem",
-                "dynamodb:BatchWriteItem"
+                "dynamodb:BatchWriteItem",
+                "dynamodb:Query",
+                "dynamodb:DeleteItem"
             ],
-            "Resource": "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-Entities"
+            "Resource": [
+                "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-Entities",
+                "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-Violations",
+                "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-Violations/index/*"
+            ]
         },
         {
             "Sid": "Logging",
@@ -41,6 +47,19 @@
                 "logs:PutLogEvents"
             ],
             "Resource": "*"
+        },
+        {
+            "Sid": "S3SnapshotAccess",
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::sirsluginston-ventureos-data",
+                "arn:aws:s3:::sirsluginston-ventureos-data/*"
+            ]
         }
     ]
 }
