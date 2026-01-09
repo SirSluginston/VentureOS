@@ -33,3 +33,8 @@ bedrock-production-config.js
 bedrock-secret.*
 .env.bedrock.*
 *bedrock*secret*
+
+# Deployment-specific configs
+*-env.json
+*-storage.json
+deployment-config*.json
