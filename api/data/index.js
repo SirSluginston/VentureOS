@@ -1,5 +1,5 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
@@ -36,7 +36,19 @@ export const handler = async (event) => {
     // GET /data/city/{slug}
     if (proxyPath.startsWith('city/')) {
         const slug = proxyPath.split('city/')[1];
-        return await getEntityData(`CITY#${slug}`);
+        const queryParams = event.queryStringParameters || {};
+        const state = queryParams.state;
+        
+        // Construct PK: CITY#slug-state
+        // If state is provided, use it. Otherwise, try slug directly (legacy support or if slug contains state)
+        let pk = `CITY#${slug}`;
+        if (state) {
+            // Note: Gold Sync writes PK as CITY#slug-STATE (uppercase state)
+            // e.g. CITY#knoxville-TN
+            pk = `CITY#${slug}-${state.toUpperCase()}`;
+        }
+        
+        return await getEntityData(pk);
     }
 
     // GET /data/company/{slug}
@@ -97,32 +109,154 @@ async function generateBedrockContent(event) {
 }
 
 async function getEntityData(pk) {
-    console.log(`Fetching data for ${pk}`);
+    try {
+        console.log(`[getEntityData] Starting fetch for ${pk}`);
 
-    // 1. Fetch Stats (Parallel)
-    const statsPromise = docClient.send(new GetCommand({
-        TableName: ENTITIES_TABLE,
-        Key: { PK: pk, SK: 'STATS#all' }
-    }));
+        // 1. Fetch Stats (Parallel)
+        console.log(`[getEntityData] Fetching stats from ${ENTITIES_TABLE}...`);
+        const statsPromise = docClient.send(new GetCommand({
+            TableName: ENTITIES_TABLE,
+            Key: { PK: pk, SK: 'STATS#all' }
+        }));
 
-    // 2. Fetch Recent Violations (Feed)
-    // We query the Violations table for everything under this Entity PK
-    const feedPromise = docClient.send(new QueryCommand({
-        TableName: VIOLATIONS_TABLE,
-        KeyConditionExpression: 'PK = :pk',
-        ExpressionAttributeValues: { ':pk': pk },
-        ScanIndexForward: false, // Newest first
-        Limit: 20 // Fetch a bit more than needed to be safe
-    }));
+        // 2. Fetch Recent Violations (Feed)
+        console.log(`[getEntityData] Fetching violations from ${VIOLATIONS_TABLE}...`);
+        const feedPromise = docClient.send(new QueryCommand({
+            TableName: VIOLATIONS_TABLE,
+            KeyConditionExpression: 'PK = :pk',
+            ExpressionAttributeValues: { ':pk': pk },
+            ScanIndexForward: false, // Newest first
+            Limit: 50 // Fetch more violations
+        }));
 
-    const [statsRes, feedRes] = await Promise.all([statsPromise, feedPromise]);
+        console.log(`[getEntityData] Waiting for parallel queries...`);
+        const [statsRes, feedRes] = await Promise.all([statsPromise, feedPromise]);
 
-    if (!statsRes.Item && (!feedRes.Items || feedRes.Items.length === 0)) {
-        return corsResponse(404, { error: 'Entity not found' });
+        console.log(`[getEntityData] PK: ${pk}`);
+        console.log(`[getEntityData] Stats found: ${!!statsRes.Item}`);
+        console.log(`[getEntityData] Violations found: ${feedRes.Items?.length || 0}`);
+        if (feedRes.Items && feedRes.Items.length > 0) {
+            console.log(`[getEntityData] First violation sample:`, JSON.stringify(feedRes.Items[0], null, 2));
+        } else {
+            console.log(`[getEntityData] No violations found for ${pk}`);
+        }
+
+        if (!statsRes.Item && (!feedRes.Items || feedRes.Items.length === 0)) {
+            console.log(`[getEntityData] Returning 404 - no stats or violations found`);
+            return corsResponse(404, { error: 'Entity not found' });
+        }
+
+    const stats = statsRes.Item || {};
+    
+    // Extract state code if this is a state entity
+    const stateCode = pk.startsWith('STATE#') ? pk.replace('STATE#', '') : null;
+    
+    // Extract cities - query STATE# directory entries
+    let cities = [];
+    if (pk.startsWith('STATE#')) {
+        const stateCode = pk.replace('STATE#', '');
+        console.log(`[getEntityData] Querying directory for cities in ${stateCode}...`);
+        
+        // Query using the Adjacency List pattern
+        // PK = STATE#TN, SK begins_with CITY#
+        const citiesQuery = await docClient.send(new QueryCommand({
+            TableName: ENTITIES_TABLE,
+            KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
+            ExpressionAttributeValues: {
+                ':pk': `STATE#${stateCode}`,
+                ':skPrefix': 'CITY#'
+            }
+        })).catch(err => {
+            console.error(`[getEntityData] City directory query failed:`, err);
+            return { Items: [] };
+        });
+        
+        console.log(`[getEntityData] Found ${citiesQuery.Items?.length || 0} cities for ${stateCode}`);
+        
+        const citySet = new Set();
+        (citiesQuery.Items || []).forEach(item => {
+            if (item.name) {
+                citySet.add(item.name);
+            }
+        });
+        
+        // Also get cities from violations as fallback
+        (feedRes.Items || []).forEach(item => {
+            if (item.city) citySet.add(item.city);
+        });
+        
+        cities = Array.from(citySet).sort();
     }
 
-    return corsResponse(200, {
-        entity: statsRes.Item || { name: 'Unknown', total_violations: 0 },
-        feed: feedRes.Items || []
+    // Extract unique companies count if it's a City
+    let companyCount = 0;
+    if (pk.startsWith('CITY#')) {
+        const companyCountQuery = await docClient.send(new QueryCommand({
+            TableName: ENTITIES_TABLE,
+            KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
+            ExpressionAttributeValues: {
+                ':pk': pk,
+                ':skPrefix': 'COMPANY#'
+            },
+            Select: 'COUNT'
+        })).catch(err => {
+            console.error(`[getEntityData] Company count query failed:`, err);
+            return { Count: 0 };
+        });
+        companyCount = companyCountQuery.Count || 0;
+        console.log(`[getEntityData] Company count for ${pk}: ${companyCount}`);
+    }
+
+    // Transform violations to match expected format
+    const violations = (feedRes.Items || []).map(item => {
+        // Extract date from SK if event_date is missing
+        // SK format: AGENCY#osha#DATE#2024-01-15#violation_id
+        let eventDate = item.event_date;
+        if (!eventDate && item.SK) {
+            const skParts = item.SK.split('#');
+            if (skParts.length >= 4 && skParts[2] === 'DATE') {
+                eventDate = skParts[3];
+            }
+        }
+        
+        return {
+            ViolationData: {
+                eventDate: eventDate || item.date || null,
+                rawData: item.raw_desc ? { 
+                    eventdate: eventDate || item.date, 
+                    ...item 
+                } : item,
+                establishment: { name: item.company_name || item.company || '' },
+                penalty: parseFloat(item.fine || item.fine_amount || 0),
+                citation: { penalty: parseFloat(item.fine || item.fine_amount || 0) }
+            },
+            ProcessedContent: item.bedrock_title ? {
+                title: item.bedrock_title,
+                explanation: item.bedrock_description || item.description
+            } : null
+        };
     });
+
+    // Return structure matching StatePageData interface
+    return corsResponse(200, {
+        state: stateCode || stats.name || 'Unknown',
+        violations: violations,
+        cities: cities,
+        stats: {
+            totalViolations: parseInt(stats.total_violations || '0'),
+            totalFines: parseFloat(stats.total_fines || '0'),
+            averageFine: stats.total_violations > 0 ? parseFloat(stats.total_fines || '0') / parseInt(stats.total_violations || '1') : 0,
+            totalCities: cities.length || parseInt(stats.total_cities || '0'),
+            totalCompanies: companyCount
+        },
+        meta: {
+            totalViolations: parseInt(stats.total_violations || '0'),
+            hasMoreViolations: violations.length >= 50
+        }
+    });
+    } catch (error) {
+        console.error(`[getEntityData] Error fetching data for ${pk}:`, error);
+        console.error(`[getEntityData] Error stack:`, error.stack);
+        return corsResponse(500, { error: error.message, stack: error.stack });
+    }
 }

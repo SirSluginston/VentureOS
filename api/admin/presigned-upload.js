@@ -20,7 +20,7 @@ const DATA_BUCKET = process.env.DATA_BUCKET || 'sirsluginston-ventureos-data';
 /**
  * Generate presigned URL for direct S3 upload
  */
-export async function generatePresignedUrl(agency, date, fileName, fileSize) {
+export async function generatePresignedUrl(agency, date, fileName, fileSize, normalizer = 'osha-severe_injury') {
   // Validate inputs
   if (!agency || !date || !fileName) {
     throw new Error('agency, date, and fileName are required');
@@ -41,9 +41,9 @@ export async function generatePresignedUrl(agency, date, fileName, fileSize) {
   }
   
   // Generate S3 key
-  // Format: bronze/historical/{agency}/{date}/{fileName}
+  // Format: bronze/historical/{agency}/{normalizer}/{date}/{fileName}
   const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : date;
-  const s3Key = `bronze/historical/${agency.toLowerCase()}/${dateStr}/${fileName}`;
+  const s3Key = `bronze/historical/${agency.toLowerCase()}/${normalizer}/${dateStr}/${fileName}`;
   
   // Create PutObject command
   const command = new PutObjectCommand({
@@ -54,7 +54,8 @@ export async function generatePresignedUrl(agency, date, fileName, fileSize) {
     Metadata: {
       uploadedBy: 'admin-ui',
       uploadedAt: new Date().toISOString(),
-      agency: agency.toLowerCase()
+      agency: agency.toLowerCase(),
+      normalizer: normalizer
     }
   });
   

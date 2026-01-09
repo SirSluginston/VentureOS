@@ -12,6 +12,7 @@ const VIOLATIONS_TABLE = process.env.VIOLATIONS_TABLE || 'VentureOS-Violations';
 const BATCH_JOBS_TABLE = process.env.BATCH_JOBS_TABLE || 'VentureOS-BedrockBatchJobs';
 const USERS_TABLE = process.env.USERS_TABLE || 'VentureOS-Users';
 const BATCH_PROCESSOR_FUNCTION = process.env.BATCH_PROCESSOR_FUNCTION || 'ventureos-bedrock-batch-processor';
+const GOLD_SYNC_FUNCTION = process.env.GOLD_SYNC_FUNCTION || 'ventureos-gold-sync';
 
 const corsResponse = (statusCode, body) => ({
   statusCode,
@@ -98,12 +99,12 @@ export const handler = async (event) => {
     // --- DATA UPLOAD ---
 
     // POST /admin/upload/presigned-url (Get presigned URL for direct S3 upload)
-    if (path.includes('/upload/presigned-url') && method === 'POST') {
-        const { agency, date, fileName, fileSize } = body;
+    if ((path === 'upload/presigned-url' || path.includes('/upload/presigned-url') || path.endsWith('upload/presigned-url')) && method === 'POST') {
+        const { agency, date, fileName, fileSize, normalizer } = body;
         if (!agency || !date || !fileName) {
             return corsResponse(400, { error: 'agency, date, and fileName are required' });
         }
-        const result = await generatePresignedUrl(agency, date, fileName, fileSize || 0);
+        const result = await generatePresignedUrl(agency, date, fileName, fileSize || 0, normalizer || 'osha-severe_injury');
         return corsResponse(200, result);
     }
 
@@ -143,6 +144,30 @@ export const handler = async (event) => {
     // PUT /admin/user/settings (Update user settings)
     if (path === 'user/settings' && method === 'PUT') {
         return await updateUserSettings(event, body);
+    }
+
+    // --- DATA SYNC ---
+
+    // POST /admin/sync/gold (Manually trigger Gold layer sync to DynamoDB)
+    if ((path === 'sync/gold' || path.includes('sync/gold')) && method === 'POST') {
+        try {
+            const invokeResult = await lambdaClient.send(new InvokeCommand({
+                FunctionName: GOLD_SYNC_FUNCTION,
+                InvocationType: 'Event', // Async invocation
+                Payload: JSON.stringify({})
+            }));
+            return corsResponse(200, { 
+                success: true, 
+                message: 'Gold sync triggered successfully',
+                requestId: invokeResult.$metadata.requestId
+            });
+        } catch (error) {
+            console.error('Error invoking gold-sync:', error);
+            return corsResponse(500, { 
+                error: 'Failed to trigger gold sync', 
+                message: error.message 
+            });
+        }
     }
 
     // POST /admin/user/create (Create user record)
