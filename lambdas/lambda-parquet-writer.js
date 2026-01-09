@@ -51,24 +51,48 @@ async function handleS3Event(record) {
   
   console.log(`📂 New File: s3://${bucket}/${key}`);
 
-  // Path: bronze/{frequency}/{AGENCY}/{VIOLATION_TYPE}/{DATE}/{filename}
-  // e.g. bronze/historical/osha/severe_injury/2026-01-08/dump.csv
+  // Path: bronze/{frequency}/{AGENCY}/{NORMALIZER}/{DATE}/{filename}
+  // e.g. bronze/historical/osha/osha-severe_injury/2026-01-08/dump.csv
   let type = null;
   
-  // Robust Folder-based Detection (Agency + Violation Type)
-  if (key.includes('/osha/severe_injury/')) {
+  // Extract normalizer from path (format: bronze/historical/{agency}/{normalizer}/{date}/...)
+  const pathParts = key.split('/');
+  const historicalIndex = pathParts.indexOf('historical');
+  
+  console.log(`🔍 Path parts: ${JSON.stringify(pathParts)}, historicalIndex: ${historicalIndex}`);
+  
+  if (historicalIndex >= 0 && pathParts.length > historicalIndex + 2) {
+    const normalizerFromPath = pathParts[historicalIndex + 2];
+    console.log(`🔍 Extracted normalizer from path: "${normalizerFromPath}"`);
+    console.log(`🔍 Available normalizers: ${Object.keys(NORMALIZERS).join(', ')}`);
+    
+    // Validate it's a known normalizer
+    if (NORMALIZERS[normalizerFromPath]) {
+      type = normalizerFromPath;
+      console.log(`✅ Matched normalizer: ${type}`);
+    } else {
+      console.warn(`⚠️ Normalizer "${normalizerFromPath}" not found in NORMALIZERS map`);
+    }
+  }
+  
+  // Fallback: Legacy path detection (for backwards compatibility)
+  if (!type) {
+    if (key.includes('/osha/severe_injury/') || key.includes('/osha/osha-severe_injury/')) {
       type = 'osha-severe_injury';
-  } else if (key.includes('/osha/enforcement/')) {
+      console.log(`✅ Matched via legacy fallback: ${type}`);
+    } else if (key.includes('/osha/enforcement/') || key.includes('/osha/osha-enforcement/')) {
       type = 'osha-enforcement';
-  } else if (key.includes('/faa/drone_incident/')) {
+      console.log(`✅ Matched via legacy fallback: ${type}`);
+    } else if (key.includes('/faa/drone_incident/')) {
       type = 'faa-drone_incident'; // Placeholder
-  } else if (key.includes('/epa/hazardous_spill/')) {
+    } else if (key.includes('/epa/hazardous_spill/')) {
       type = 'epa-hazardous_spill'; // Placeholder
+    }
   }
   
   // Strict Fallback: Log warning if structure is violated
   if (!type && (key.includes('/historical/') || key.includes('/daily/'))) {
-     console.warn(`⚠️ Unrecognized Folder Structure: ${key}`);
+     console.warn(`⚠️ Unrecognized Folder Structure: ${key}. Expected format: bronze/historical/{agency}/{normalizer}/{date}/{filename}`);
   }
 
   const normalizer = NORMALIZERS[type];

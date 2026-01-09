@@ -7,21 +7,31 @@
 
 import { DuckDBInstance } from '@duckdb/node-api';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
+import { DynamoDBClient, ScanCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
 
 const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION || 'us-east-1' });
 const BEDROCK_GENERATOR_FUNCTION = process.env.BEDROCK_GENERATOR_FUNCTION || 'ventureos-bedrock-generator';
+const ddbClient = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
+const ENTITY_TABLE = 'VentureOS-Entities';
 
 const BUCKET = 'sirsluginston-ventureos-data';
 const ARCHIVE_PATH = `s3://${BUCKET}/silver/violations/archive/**/*.parquet`;
 const BUFFER_PATH = `s3://${BUCKET}/silver/violations/buffer/**/*.parquet`;
 
 async function initDuckDB() {
+  // FIX: Force set HOME env var for extensions that rely on it (like avro/iceberg)
+  const isLambda = process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined;
+  if (isLambda) {
+    process.env.HOME = '/tmp';
+  }
+  
   const db = await DuckDBInstance.create(':memory:');
   const con = await db.connect();
   
   await con.run("SET temp_directory='/tmp/duckdb_temp'");
   await con.run("SET home_directory='/tmp'");
-  await con.run("INSTALL httpfs; LOAD httpfs; INSTALL aws; LOAD aws;");
+  await con.run("INSTALL aws; LOAD aws;");
+  await con.run("INSTALL iceberg; LOAD iceberg;");
   
   if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
     await con.run("CREATE SECRET (TYPE S3, PROVIDER credential_chain);");
@@ -30,73 +40,107 @@ async function initDuckDB() {
     await con.run("CREATE SECRET (TYPE S3, PROVIDER credential_chain);");
   }
 
-  // Enable Hive Partitioning to auto-detect violation_year / ingest_date
-  // await con.run("SET hive_partitioning=true;"); // Deprecated/Not supported globally
-
-  // Create Unified View (Buffer + Archive)
-  // Strategy: Try combined, then individual, then empty fallback
-  // This handles cases where one folder is empty (DuckDB throws on empty glob matches)
+  // S3 Tables Bucket ARN (for Silver layer)
+  const S3_TABLE_BUCKET_ARN = process.env.S3_TABLE_BUCKET_ARN || 
+    'arn:aws:s3tables:us-east-1:611538926352:bucket/sirsluginston-ventureos-data-ocean';
   
   let viewCreated = false;
   
-  // 1. Try Combined
+  // Try S3 Tables first (Silver layer)
   try {
+    console.log(`🔗 Attaching S3 Tables bucket: ${S3_TABLE_BUCKET_ARN}`);
+    await con.run(`ATTACH '${S3_TABLE_BUCKET_ARN}' AS ocean (TYPE iceberg, ENDPOINT_TYPE s3_tables)`);
+    
+    // Create unified view from all agency tables (osha, epa, faa, etc.)
+    // We'll query each agency table and UNION them
+    // First, check what tables exist
+    const tablesReader = await con.run("SHOW TABLES FROM ocean.silver;");
+    const tables = await tablesReader.getRows();
+    const agencyTables = tables.map(row => row[0]).filter(name => name && name !== 'violations');
+    
+    console.log(`📊 Found agency tables: ${agencyTables.join(', ')}`);
+    
+    if (agencyTables.length > 0) {
+      // Create UNION view of all agency tables
+      const unionQueries = agencyTables.map(table => `SELECT * FROM ocean.silver.${table}`).join(' UNION ALL ');
+      await con.run(`CREATE VIEW violations AS ${unionQueries}`);
+      viewCreated = true;
+      console.log(`✅ Created unified view from ${agencyTables.length} agency tables`);
+    }
+  } catch (e) {
+    console.warn(`⚠️ S3 Tables view failed: ${e.message}`);
+  }
+
+  // Fallback: Try regular Parquet files (for backwards compatibility)
+  if (!viewCreated) {
+    await con.run("INSTALL httpfs; LOAD httpfs;");
+    
+    try {
       await con.run(`
         CREATE VIEW violations AS 
         SELECT * FROM read_parquet(['${ARCHIVE_PATH}', '${BUFFER_PATH}'], union_by_name=true, hive_partitioning=true)
       `);
       viewCreated = true;
-  } catch (e) { 
-      console.warn("⚠️ Combined view failed (likely empty path), retrying individual...", e.message); 
-  }
-
-  // 2. Try Archive Only (if combined failed)
-  if (!viewCreated) {
-    try {
-        await con.run(`
-          CREATE VIEW violations AS 
-          SELECT * FROM read_parquet('${ARCHIVE_PATH}', union_by_name=true, hive_partitioning=true)
-        `);
-        viewCreated = true;
+      console.log("✅ Created view from Parquet files");
     } catch (e) { 
-        console.warn("⚠️ Archive view failed...", e.message); 
+      console.warn("⚠️ Combined Parquet view failed, retrying individual...", e.message); 
+    }
+
+    if (!viewCreated) {
+      try {
+        await con.run(`CREATE VIEW violations AS SELECT * FROM read_parquet('${BUFFER_PATH}', union_by_name=true, hive_partitioning=true)`);
+        viewCreated = true;
+        console.log("✅ Created view from buffer Parquet files");
+      } catch (e) {
+        console.warn("⚠️ Buffer Parquet view failed...", e.message);
+      }
     }
   }
 
-  // 3. Try Buffer Only (if archive failed)
+  // Final Fallback: Empty View
   if (!viewCreated) {
-    try {
-        await con.run(`
-          CREATE VIEW violations AS 
-          SELECT * FROM read_parquet('${BUFFER_PATH}', union_by_name=true, hive_partitioning=true)
-        `);
-        viewCreated = true;
-    } catch (e) { 
-        console.warn("⚠️ Buffer view failed...", e.message); 
-    }
-  }
-
-  // 4. Fallback: Empty View
-  if (!viewCreated) {
-      console.warn("⚠️ No data found in S3! Creating empty view.");
-      await con.run(`
-          CREATE VIEW violations AS 
-          SELECT 
-            NULL::VARCHAR as agency, 
-            NULL::VARCHAR as city, 
-            NULL::VARCHAR as state, 
-            NULL::VARCHAR as company_name, 
-            NULL::VARCHAR as company_slug,
-            NULL::DATE as event_date, 
-            NULL::DOUBLE as fine_amount, 
-            NULL::VARCHAR as violation_type, 
-            NULL::VARCHAR as bedrock_title,
-            NULL::VARCHAR as bedrock_description
-          WHERE 1=0
-      `);
+    console.warn("⚠️ No data found! Creating empty view.");
+    await con.run(`
+        CREATE VIEW violations AS 
+        SELECT 
+          NULL::VARCHAR as agency, 
+          NULL::VARCHAR as city, 
+          NULL::VARCHAR as state, 
+          NULL::VARCHAR as company_name, 
+          NULL::VARCHAR as company_slug,
+          NULL::DATE as event_date, 
+          NULL::DOUBLE as fine_amount, 
+          NULL::VARCHAR as violation_type, 
+          NULL::VARCHAR as bedrock_title,
+          NULL::VARCHAR as bedrock_description
+        WHERE 1=0
+    `);
   }
 
   return { db, con };
+}
+
+/**
+ * Paginate DynamoDB Scan to get all items
+ */
+async function paginatedScan(scanParams) {
+  const allItems = [];
+  let lastEvaluatedKey = null;
+  
+  do {
+    const params = { ...scanParams };
+    if (lastEvaluatedKey) {
+      params.ExclusiveStartKey = lastEvaluatedKey;
+    }
+    
+    const result = await ddbClient.send(new ScanCommand(params));
+    if (result.Items) {
+      allItems.push(...result.Items);
+    }
+    lastEvaluatedKey = result.LastEvaluatedKey;
+  } while (lastEvaluatedKey);
+  
+  return allItems;
 }
 
 export async function handler(event) {
@@ -271,39 +315,70 @@ export async function handler(event) {
 
     // Route: /api/national (Stats)
     if (path.includes('/api/national')) {
-      console.log('🇺🇸 Fetching National Stats');
-      // Aggregation query
-      const stats = await query(`
-        SELECT 
-          COUNT(*) as totalViolations,
-          SUM(fine_amount) as totalFines,
-          COUNT(DISTINCT state) as totalStates,
-          COUNT(DISTINCT city) as totalCities
-        FROM violations
-      `);
+      console.log('🇺🇸 Fetching National Stats from DynamoDB');
       
-      const states = await query(`
-        SELECT 
-          state, 
-          COUNT(*) as violationCount, 
-          COUNT(DISTINCT city) as cityCount 
-        FROM violations 
-        GROUP BY state 
-        ORDER BY state ASC
-      `);
-
+      // Get pre-aggregated national stats
+      const nationalGet = await ddbClient.send(new GetItemCommand({
+        TableName: ENTITY_TABLE,
+        Key: {
+          PK: { S: 'NATIONAL#USA' },
+          SK: { S: 'STATS#all' }
+        }
+      }));
+      
+      // Get all state stats for the directory (with pagination)
+      const stateItems = await paginatedScan({
+        TableName: ENTITY_TABLE,
+        FilterExpression: 'begins_with(PK, :pk) AND SK = :sk',
+        ExpressionAttributeValues: {
+          ':pk': { S: 'STATE#' },
+          ':sk': { S: 'STATS#all' }
+        }
+      });
+      
+      // Get city stats to count cities per state (with pagination)
+      const cityItems = await paginatedScan({
+        TableName: ENTITY_TABLE,
+        FilterExpression: 'begins_with(PK, :pk) AND SK = :sk',
+        ExpressionAttributeValues: {
+          ':pk': { S: 'CITY#' },
+          ':sk': { S: 'STATS#all' }
+        }
+      });
+      
+      // Build city count map by state
+      const cityCountByState = {};
+      for (const cityItem of cityItems) {
+        const cityPk = cityItem.PK.S.replace('CITY#', '');
+        const stateMatch = cityPk.match(/-([A-Z]{2})$/);
+        if (stateMatch) {
+          const state = stateMatch[1];
+          cityCountByState[state] = (cityCountByState[state] || 0) + 1;
+        }
+      }
+      
+      // Build states array
+      const states = [];
+      for (const item of stateItems) {
+        const stateCode = item.PK.S.replace('STATE#', '');
+        states.push({
+          state: stateCode,
+          violationCount: parseInt(item.total_violations?.N || '0'),
+          cityCount: cityCountByState[stateCode] || 0
+        });
+      }
+      states.sort((a, b) => a.state.localeCompare(b.state));
+      
+      // Extract national stats from DynamoDB
+      const nationalItem = nationalGet.Item;
       const response = {
         stats: {
-          totalStates: Number(stats[0].totalStates),
-          totalCities: Number(stats[0].totalCities),
-          totalViolations: Number(stats[0].totalViolations),
-          totalFines: Number(stats[0].totalFines)
+          totalStates: parseInt(nationalItem?.total_states?.N || '0'),
+          totalCities: parseInt(nationalItem?.total_cities?.N || '0'),
+          totalViolations: parseInt(nationalItem?.total_violations?.N || '0'),
+          totalFines: parseFloat(nationalItem?.total_fines?.N || '0')
         },
-        states: states.map(s => ({
-          state: s.state,
-          cityCount: Number(s.cityCount),
-          violationCount: Number(s.violationCount)
-        }))
+        states: states
       };
       return apiResponse(200, response);
     }
