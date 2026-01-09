@@ -6,6 +6,10 @@
  */
 
 import { DuckDBInstance } from '@duckdb/node-api';
+import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
+
+const lambdaClient = new LambdaClient({ region: process.env.AWS_REGION || 'us-east-1' });
+const BEDROCK_GENERATOR_FUNCTION = process.env.BEDROCK_GENERATOR_FUNCTION || 'ventureos-bedrock-generator';
 
 const BUCKET = 'sirsluginston-ventureos-data';
 const ARCHIVE_PATH = `s3://${BUCKET}/silver/violations/archive/**/*.parquet`;
@@ -397,6 +401,11 @@ export async function handler(event) {
       return apiResponse(200, { cities: results.map(r => ({ ...r, violationCount: Number(r.violationCount) })) });
     }
 
+    // Route: /api/bedrock/generate (Trigger Bedrock content generation)
+    if (path.includes('/api/bedrock/generate') && event.httpMethod === 'POST') {
+      return await handleBedrockGenerate(event);
+    }
+
     return apiResponse(404, { error: `Route not found: ${path}` });
 
   } catch (error) {
@@ -414,13 +423,51 @@ export async function handler(event) {
   }
 }
 
+/**
+ * Handle Bedrock generation request - invokes Bedrock Generator Lambda asynchronously
+ */
+async function handleBedrockGenerate(event) {
+  try {
+    let body;
+    if (typeof event.body === 'string') {
+      body = JSON.parse(event.body);
+    } else {
+      body = event.body || {};
+    }
+    
+    const violationId = body.violation_id;
+    
+    if (!violationId) {
+      return apiResponse(400, { error: 'violation_id is required' });
+    }
+    
+    // Invoke Bedrock Generator Lambda asynchronously (fire-and-forget)
+    await lambdaClient.send(new InvokeCommand({
+      FunctionName: BEDROCK_GENERATOR_FUNCTION,
+      InvocationType: 'Event', // Async invocation
+      Payload: JSON.stringify({
+        body: JSON.stringify({ violation_id: violationId })
+      })
+    }));
+    
+    return apiResponse(202, { 
+      message: 'Bedrock content generation started',
+      violation_id: violationId
+    });
+    
+  } catch (error) {
+    console.error('Error invoking Bedrock Generator:', error);
+    return apiResponse(500, { error: error.message });
+  }
+}
+
 function apiResponse(code, body) {
   return {
     statusCode: code,
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*', // CORS
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type'
     },
     body: JSON.stringify(body)

@@ -30,7 +30,12 @@ export const UNIFIED_SCHEMA = {
   raw_title: 'VARCHAR',           // Headline
   raw_description: 'VARCHAR',     // Full Text
   bedrock_title: 'VARCHAR',       // AI Summary Title
-  bedrock_description: 'VARCHAR', // AI Summary Text
+  bedrock_description: 'VARCHAR',  // AI Summary Text
+  bedrock_tags: 'VARCHAR[]',       // AI-generated tags
+  bedrock_generated_at: 'TIMESTAMP', // When Bedrock generated content
+  is_verified: 'BOOLEAN',         // Editorially reviewed?
+  verified_at: 'TIMESTAMP',        // When verified
+  verified_by: 'VARCHAR',          // Who verified (admin email)
   source_url: 'VARCHAR',          // Link to truth
   
   // --- Metadata ---
