@@ -1,34 +1,53 @@
-# Deployment Scripts
+# VentureOS Scripts
 
-Scripts for deploying VentureOS Lambda functions and infrastructure.
+Scripts for managing VentureOS infrastructure and data.
 
-## Lambda Deployment Scripts
+## Directory Structure
 
-- **`deploy.bat`** - Deploy parquet writer Lambda
-- **`deploy-admin-api.bat`** - Deploy admin API Lambda
-- **`deploy-config-api.bat`** - Deploy config API Lambda
-- **`deploy-consolidator.bat`** - Deploy consolidator Lambda
-- **`deploy-data-api.bat`** - Deploy data API Lambda
-- **`deploy-query-handler.bat`** - Deploy query handler Lambda
-- **`deploy-stats-rebuild.sh`** - Deploy stats rebuild Lambda (Linux/Mac)
+- **`utilities/`** - Utility scripts for data management and setup
+  - `create-pages.js` - Populate DynamoDB with page entries for brands
+  - `create-test-violations.js` - Create test violations (development only)
+  - `check-bedrock-sync.js` - Verify Bedrock content sync to S3 Tables
+  - `verify-bedrock-sync.js` - Check sync status
 
-## Utility Scripts
+- **`deploy.bat`** - Core infrastructure deployment (parquet writer Lambda)
+  - Only needed for infrastructure updates
+  - Not needed for adding new brands
 
-- **`create-pages.js`** - Populate DynamoDB with initial page entries for brands
-- **`swap-api.bat`** - One-time script to swap API Gateway routes (legacy)
-- **`swap-options.bat`** - One-time script to configure OPTIONS routes (legacy)
-- **`deploy_apis.ps1`** - PowerShell script for API deployment (legacy)
+## Infrastructure Configuration
+
+Infrastructure configuration files are in `../infrastructure/`:
+- DynamoDB table definitions (`create-*-table.json`)
+- API Gateway configurations (`api-gateway.yaml`)
+- S3 event triggers (`s3-batch-result-trigger.json`)
+- Lambda environment variables (`batch-*-env.json`)
+- Gateway response configs (`gateway-response-*.json`)
+
+## Adding New Brands
+
+New brands (e.g., TransportTrail, EPA Trail) plug into existing infrastructure:
+
+1. **Create Brand Entry** - Add `BRAND#` entry to `VentureOS-Projects` DynamoDB table
+2. **Create Pages** - Run `utilities/create-pages.js` to add page entries
+3. **Configure Agency Filters** - Update batch processing configs if needed (in `utils/bedrockBatchConfig.js`)
+4. **Deploy Frontend** - Deploy brand-specific frontend pointing to same API Gateway
+
+**No Lambda redeployment needed** - All brands share the same backend infrastructure.
+
+The only differences between brands:
+- **Agency filters** (OSHA vs NHTSA/FAA/USCG/FRA vs EPA)
+- **UI focus** (violations vs stats/scores)
+- **Branding** (colors, logos, names)
 
 ## Usage
 
-Run from the `VentureOS` directory:
-
 ```bash
-# Windows
-scripts\deploy-query-handler.bat
+# Create pages for all brands
+node scripts/utilities/create-pages.js
 
-# Linux/Mac
-bash scripts/deploy-stats-rebuild.sh
+# Check Bedrock sync status
+node scripts/utilities/check-bedrock-sync.js <violation_id>
+
+# Deploy infrastructure updates (rarely needed)
+scripts\deploy.bat
 ```
-
-
