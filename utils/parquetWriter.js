@@ -148,16 +148,56 @@ export async function convertToParquet(violations, outputPath, options = {}) {
        await con.run(`ATTACH '${bucketArn}' AS ventureos_lake (TYPE iceberg, ENDPOINT_TYPE s3_tables)`);
        
        const targetTable = `ventureos_lake.${namespace}.${tableName}`;
-       console.log(`➡️ Inserting into: ${targetTable}`);
+       console.log(`➡️ Target table: ${targetTable}`);
+       
+       // Check if table exists and get its schema
+       let tableExists = false;
+       let existingColumns = [];
        
        try {
-         await con.run(`INSERT INTO ${targetTable} SELECT * FROM violations`);
-         console.log(`✅ Appended to S3 Table`);
+         // Query table structure - con.run() returns a reader for SELECT queries
+         const schemaReader = await con.run(`DESCRIBE ${targetTable}`);
+         const schemaRows = await schemaReader.getRows();
+         // DESCRIBE returns rows as arrays: [column_name, type, null, key, default, extra]
+         existingColumns = schemaRows.map(row => row[0]); // First column is column_name
+         tableExists = true;
+         console.log(`✅ Table ${targetTable} exists with ${existingColumns.length} columns: ${existingColumns.join(', ')}`);
        } catch (err) {
-         console.warn(`⚠️ Insert failed: ${err.message}. Attempting CREATE TABLE...`);
-         // If table doesn't exist, create it
+         if (err.message.includes('does not exist') || err.message.includes('Catalog Error')) {
+           tableExists = false;
+           console.log(`ℹ️ Table ${targetTable} does not exist, will create`);
+         } else {
+           // Some other error, rethrow
+           throw err;
+         }
+       }
+       
+       if (!tableExists) {
+         // Create table if it doesn't exist
+         console.log(`📝 Creating table: ${targetTable}`);
          await con.run(`CREATE TABLE ${targetTable} AS SELECT * FROM violations`);
          console.log(`✅ Created and populated new Iceberg table`);
+       } else {
+         // Table exists, insert only matching columns
+         console.log(`➡️ Inserting into existing table: ${targetTable}`);
+         
+         // Get columns from violations temp table
+         const violationsReader = await con.run(`DESCRIBE violations`);
+         const violationsRows = await violationsReader.getRows();
+         const violationsColumns = violationsRows.map(row => row[0]); // First column is column_name
+         
+         // Find columns that exist in both tables
+         const matchingColumns = violationsColumns.filter(col => existingColumns.includes(col));
+         
+         if (matchingColumns.length === 0) {
+           throw new Error(`No matching columns between violations table and ${targetTable}`);
+         }
+         
+         console.log(`📋 Inserting ${matchingColumns.length} matching columns: ${matchingColumns.join(', ')}`);
+         
+         const columnList = matchingColumns.join(', ');
+         await con.run(`INSERT INTO ${targetTable} (${columnList}) SELECT ${columnList} FROM violations`);
+         console.log(`✅ Appended to S3 Table`);
        }
        
        // --- GOLD LAYER AGGREGATION ---
@@ -184,7 +224,7 @@ export async function convertToParquet(violations, outputPath, options = {}) {
              COUNT(*) as violation_count,
              SUM(fine_amount) as total_fines,
              MAX(event_date) as last_violation_date,
-             LIST(distinct agency) as agencies
+             LIST(distinct agency) as agency
            FROM violations
            GROUP BY company_name, company_slug
          `;

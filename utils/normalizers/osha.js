@@ -134,8 +134,21 @@ function normalizeCity(city) {
 }
 
 function normalizeState(state) {
-  if (!state) return '';
-  if (state.length === 2) return state.toUpperCase();
+  if (!state) return null;
+  
+  const cleanState = state.toLowerCase().trim();
+  
+  // Valid US States and Territories
+  const validStates = new Set([
+    'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 
+    'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 
+    'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 
+    'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 
+    'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
+    'DC', // District of Columbia
+    'PR', 'VI', 'GU', 'AS', 'MP' // Territories
+  ]);
+
   const stateMap = {
     'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR',
     'california': 'CA', 'colorado': 'CO', 'connecticut': 'CT', 'delaware': 'DE',
@@ -150,8 +163,24 @@ function normalizeState(state) {
     'south dakota': 'SD', 'tennessee': 'TN', 'texas': 'TX', 'utah': 'UT',
     'vermont': 'VT', 'virginia': 'VA', 'washington': 'WA', 'west virginia': 'WV',
     'wisconsin': 'WI', 'wyoming': 'WY', 'district of columbia': 'DC',
+    'puerto rico': 'PR', 'virgin islands': 'VI', 'guam': 'GU', 
+    'american samoa': 'AS', 'northern mariana islands': 'MP',
+    // Common variants found in data
+    'pu': 'PR', // Puerto Rico variant
+    'am': 'AS', // American Samoa variant (Pago Pago)
+    'cn': 'MP'  // Northern Mariana Islands variant
   };
-  return stateMap[state.toLowerCase().trim()] || state.toUpperCase().substring(0, 2);
+
+  // 1. Try Map lookup
+  let code = stateMap[cleanState];
+
+  // 2. Fallback: If 2 letters, uppercase it
+  if (!code && cleanState.length === 2) {
+    code = cleanState.toUpperCase();
+  }
+
+  // 3. Validation: Only return if it's a known US State/Territory
+  return validStates.has(code) ? code : null;
 }
 
 function slugify(str) {
