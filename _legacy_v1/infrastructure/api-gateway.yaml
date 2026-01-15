@@ -1,0 +1,237 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VentureOS API Gateway V2 (Split-Architecture)
+
+Parameters:
+  CognitoUserPoolArn:
+    Type: String
+    Default: arn:aws:cognito-idp:us-east-1:611538926352:userpool/us-east-1_TNq7tie6D
+  AccountId:
+    Type: String
+    Default: 611538926352
+
+Resources:
+  # --- API Gateway ---
+  VentureOSApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: VentureOS-API-V2
+      Description: API for Config, Data, and Admin functions
+      EndpointConfiguration:
+        Types: 
+          - REGIONAL
+
+  # --- Authorizer ---
+  CognitoAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: CognitoUserPoolAuthorizer
+      Type: COGNITO_USER_POOLS
+      IdentitySource: method.request.header.Authorization
+      RestApiId: !Ref VentureOSApi
+      ProviderARNs:
+        - !Ref CognitoUserPoolArn
+
+  # --- /config ---
+  ConfigResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref VentureOSApi
+      ParentId: !GetAtt VentureOSApi.RootResourceId
+      PathPart: config
+
+  ConfigProxyResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref VentureOSApi
+      ParentId: !Ref ConfigResource
+      PathPart: '{proxy+}'
+
+  ConfigMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref VentureOSApi
+      ResourceId: !Ref ConfigProxyResource
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:${AccountId}:function:ventureos-api-config/invocations
+
+  # --- /data ---
+  DataResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref VentureOSApi
+      ParentId: !GetAtt VentureOSApi.RootResourceId
+      PathPart: data
+
+  DataProxyResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref VentureOSApi
+      ParentId: !Ref DataResource
+      PathPart: '{proxy+}'
+
+  DataMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref VentureOSApi
+      ResourceId: !Ref DataProxyResource
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:${AccountId}:function:ventureos-api-data/invocations
+
+  DataOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref VentureOSApi
+      ResourceId: !Ref DataProxyResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Max-Age: "'86400'"
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Max-Age: true
+
+  # --- /admin ---
+  AdminResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref VentureOSApi
+      ParentId: !GetAtt VentureOSApi.RootResourceId
+      PathPart: admin
+
+  AdminProxyResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref VentureOSApi
+      ParentId: !Ref AdminResource
+      PathPart: '{proxy+}'
+
+  AdminMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref VentureOSApi
+      ResourceId: !Ref AdminProxyResource
+      HttpMethod: ANY
+      AuthorizationType: COGNITO_USER_POOLS
+      AuthorizerId: !Ref CognitoAuthorizer
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:${AccountId}:function:ventureos-api-admin/invocations
+
+  AdminOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref VentureOSApi
+      ResourceId: !Ref AdminProxyResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # --- Lambda Permissions ---
+  ConfigLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: ventureos-api-config
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:us-east-1:${AccountId}:${VentureOSApi}/*/*/*
+
+  DataLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: ventureos-api-data
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:us-east-1:${AccountId}:${VentureOSApi}/*/*/*
+
+  AdminLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: ventureos-api-admin
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:us-east-1:${AccountId}:${VentureOSApi}/*/*/*
+
+  # --- Deployment ---
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - ConfigMethod
+      - DataMethod
+      - AdminMethod
+    Properties:
+      RestApiId: !Ref VentureOSApi
+
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: v2
+      RestApiId: !Ref VentureOSApi
+      DeploymentId: !Ref ApiDeployment
+
+  # --- Gateway Responses for CORS on Auth Errors ---
+  UnauthorizedGatewayResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref VentureOSApi
+      ResponseType: UNAUTHORIZED
+      StatusCode: '401'
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,OPTIONS'"
+
+  AccessDeniedGatewayResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref VentureOSApi
+      ResponseType: ACCESS_DENIED
+      StatusCode: '403'
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,OPTIONS'"
+
+Outputs:
+  ApiUrl:
+    Description: URL of the API Gateway
+    Value: !Sub https://${VentureOSApi}.execute-api.us-east-1.amazonaws.com/v2
+
+
+

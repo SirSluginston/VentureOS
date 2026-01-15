@@ -1,0 +1,64 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "BedrockBatchJobCreation",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:CreateModelInvocationJob",
+        "bedrock:GetModelInvocationJob"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "bedrock:modelId": "mistral.mistral-large-2402-v1:0"
+        }
+      }
+    },
+    {
+      "Sid": "S3TablesRead",
+      "Effect": "Allow",
+      "Action": [
+        "s3tables:GetTable",
+        "s3tables:GetData"
+      ],
+      "Resource": [
+        "arn:aws:s3tables:us-east-1:611538926352:bucket/sirsluginston-ventureos-data-ocean/*"
+      ]
+    },
+    {
+      "Sid": "S3BatchInputOutput",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::sirsluginston-ventureos-data/bedrock-batches/*",
+        "arn:aws:s3:::sirsluginston-ventureos-data"
+      ]
+    },
+    {
+      "Sid": "DynamoDBWrite",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:PutItem"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-BedrockBatchJobs"
+      ]
+    },
+    {
+      "Sid": "CloudWatchLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:us-east-1:*:log-group:/aws/lambda/ventureos-bedrock-batch-processor*"
+    }
+  ]
+}
+

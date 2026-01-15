@@ -1,0 +1,68 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "S3TablesAccess",
+            "Effect": "Allow",
+            "Action": [
+                "s3tables:*"
+            ],
+            "Resource": [
+                "arn:aws:s3tables:us-east-1:611538926352:bucket/sirsluginston-ventureos-data-ocean",
+                "arn:aws:s3tables:us-east-1:611538926352:bucket/sirsluginston-ventureos-data-ocean/*"
+            ]
+        },
+        {
+            "Sid": "GlueAccess",
+            "Effect": "Allow",
+            "Action": [
+                "glue:GetDatabase",
+                "glue:GetTable",
+                "glue:GetPartitions"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "DynamoDBAccess",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:BatchWriteItem",
+                "dynamodb:Query",
+                "dynamodb:DeleteItem"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-Entities",
+                "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-Violations",
+                "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-Violations/index/*"
+            ]
+        },
+        {
+            "Sid": "Logging",
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "S3SnapshotAccess",
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::sirsluginston-ventureos-data",
+                "arn:aws:s3:::sirsluginston-ventureos-data/*"
+            ]
+        }
+    ]
+}
+
+
+

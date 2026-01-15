@@ -1,0 +1,59 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "BedrockBatchInference",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:CreateModelInvocationJob",
+        "bedrock:GetModelInvocationJob",
+        "bedrock:ListModelInvocationJobs",
+        "bedrock:StopModelInvocationJob"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "bedrock:modelId": "mistral.mistral-large-2402-v1:0"
+        }
+      }
+    },
+    {
+      "Sid": "BedrockOnDemandInference",
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:us-east-1::foundation-model/mistral.mistral-large-2402-v1:0"
+      ]
+    },
+    {
+      "Sid": "BedrockBatchInputOutput",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::sirsluginston-ventureos-data/bedrock-batches/*"
+      ]
+    },
+    {
+      "Sid": "CloudWatchLogging",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:us-east-1:*:log-group:/aws/lambda/lambda-bedrock*"
+    }
+  ]
+}
+
+
+
+
+

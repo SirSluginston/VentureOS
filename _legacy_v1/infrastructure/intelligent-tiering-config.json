@@ -1,0 +1,12 @@
+{
+  "Id": "EntireBucket",
+  "Status": "Enabled",
+  "Filter": {},
+  "Tierings": [
+    {
+      "Days": 0,
+      "AccessTier": "ARCHIVE_ACCESS"
+    }
+  ]
+}
+

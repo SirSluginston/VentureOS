@@ -1,0 +1,68 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "ReadFromBronzeLayer",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::sirsluginston-ventureos-data",
+                "arn:aws:s3:::sirsluginston-ventureos-data/*"
+            ]
+        },
+        {
+            "Sid": "WriteToTableBucket",
+            "Effect": "Allow",
+            "Action": [
+                "s3tables:*"
+            ],
+            "Resource": [
+                "arn:aws:s3tables:us-east-1:611538926352:bucket/sirsluginston-ventureos-data-ocean",
+                "arn:aws:s3tables:us-east-1:611538926352:bucket/sirsluginston-ventureos-data-ocean/*"
+            ]
+        },
+        {
+            "Sid": "GlueCatalogAccess",
+            "Effect": "Allow",
+            "Action": [
+                "glue:GetDatabase",
+                "glue:GetTable",
+                "glue:GetPartitions",
+                "glue:CreateTable",
+                "glue:UpdateTable",
+                "glue:BatchCreatePartition"
+            ],
+            "Resource": [
+                "arn:aws:glue:us-east-1:*:catalog",
+                "arn:aws:glue:us-east-1:*:database/ventureos_violations",
+                "arn:aws:glue:us-east-1:*:table/ventureos_violations/*"
+            ]
+        },
+        {
+            "Sid": "CloudWatchLogging",
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "arn:aws:logs:us-east-1:*:log-group:/aws/lambda/ventureos-parquet-writer*"
+        },
+        {
+            "Sid": "DynamoDBAccess",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:PutItem",
+                "dynamodb:Query",
+                "dynamodb:DeleteItem",
+                "dynamodb:GetItem"
+            ],
+            "Resource": "arn:aws:dynamodb:us-east-1:*:table/VentureOS-Violations*"
+        }
+    ]
+}
+

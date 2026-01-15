@@ -1,0 +1,63 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "DynamoDBAccess",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:Query",
+                "dynamodb:Scan",
+                "dynamodb:BatchGetItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-Projects",
+                "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-Entities",
+                "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-Violations",
+                "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-Violations/index/*",
+                "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-Entities/index/*",
+                "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-BedrockBatchJobs",
+                "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-Users"
+            ]
+        },
+        {
+            "Sid": "LambdaInvoke",
+            "Effect": "Allow",
+            "Action": [
+                "lambda:InvokeFunction"
+            ],
+            "Resource": [
+                "arn:aws:lambda:us-east-1:611538926352:function:ventureos-bedrock-batch-processor",
+                "arn:aws:lambda:us-east-1:611538926352:function:ventureos-bedrock-generator",
+                "arn:aws:lambda:us-east-1:611538926352:function:ventureos-gold-sync"
+            ]
+        },
+        {
+            "Sid": "S3PresignedUpload",
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::sirsluginston-ventureos-data/bronze/historical/*"
+            ]
+        },
+        {
+            "Sid": "Logging",
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "arn:aws:logs:us-east-1:*:*"
+        }
+    ]
+}
+
+
+

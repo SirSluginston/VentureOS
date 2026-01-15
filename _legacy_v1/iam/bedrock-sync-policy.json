@@ -1,0 +1,58 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DynamoDBStreamsRead",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:DescribeStream",
+        "dynamodb:ListStreams"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:611538926352:table/VentureOS-Violations/stream/*"
+    },
+    {
+      "Sid": "S3TablesWrite",
+      "Effect": "Allow",
+      "Action": [
+        "s3tables:GetTableBucket",
+        "s3tables:PutData",
+        "s3tables:WriteData",
+        "s3tables:UpdateTableMetadataLocation"
+      ],
+      "Resource": [
+        "arn:aws:s3tables:us-east-1:611538926352:bucket/sirsluginston-ventureos-data-ocean",
+        "arn:aws:s3tables:us-east-1:611538926352:bucket/sirsluginston-ventureos-data-ocean/table/*"
+      ]
+    },
+    {
+      "Sid": "S3PutObject",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::sirsluginston-ventureos-data-ocean/*"
+    },
+    {
+        "Sid": "S3DeleteObject",
+        "Effect": "Allow",
+        "Action": [
+          "s3:DeleteObject",
+          "s3:AbortMultipartUpload"
+        ],
+        "Resource": "arn:aws:s3:::sirsluginston-ventureos-data-ocean/*"
+      },
+    {
+      "Sid": "CloudWatchLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:us-east-1:*:log-group:/aws/lambda/ventureos-bedrock-sync*"
+    }
+  ]
+}
+
