@@ -1,45 +1,37 @@
 ﻿# Dependencies
 node_modules/
+package-lock.json
 
-# Build artifacts
-*.zip
-lambda-deploy/
-lambda-batch-package/
-*-deploy/
-deploy-*/
-gold-sync-deploy/
-scripts/*-deploy/
-scripts/*-deploy-*/
-
-# Deployment scripts (local use)
-deploy-*.sh
-deploy-*.ps1
-*.bat
-
-# Test artifacts
-test-event.json
-response.json
-test-output.parquet
+# Environment Variables
+.env
+.env.*
 
 # Logs
 *.log
+npm-debug.log*
 
-# IDE
+# Editor/OS
 .vscode/
 .idea/
-
-# OS
 .DS_Store
 Thumbs.db
 
-# Bedrock Configuration (SECRET - NEVER COMMIT)
-bedrock-production-config.json
-bedrock-production-config.js
-bedrock-secret.*
-.env.bedrock.*
-*bedrock*secret*
+# Build Artifacts
+dist/
+build/
+*.zip
+coverage/
 
-# Deployment-specific configs
-*-env.json
-*-storage.json
-deployment-config*.json
+# AWS & Infrastructure
+cdk.out/
+.aws-sam/
+
+# Data & Local DBs
+*.db
+*.duckdb
+*.parquet
+temp/
+tmp/
+
+# Documentation
+*.slug
