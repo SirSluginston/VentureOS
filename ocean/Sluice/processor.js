@@ -45,17 +45,20 @@ const PARQUET_SCHEMA = {
 };
 
 export const handler = async (event) => {
-    console.log(`⚡ Processor: Handling ${event.Records.length} batches...`);
+    console.log(`⚡ Processor: Handling ${event.Records.length} messages...`);
 
     const outputBatch = [];
 
-    // 1. Process Batch
+    // 1. Process Messages (each message contains multiple rows)
     for (const record of event.Records) {
         try {
             const payload = JSON.parse(record.body);
-            const { raw, meta } = payload;
+            
+            // Handle both old format (single row) and new format (array of rows)
+            const rows = payload.rows || [payload.raw];
+            const meta = payload.meta;
 
-            // 1. Identify Agency (from meta path)
+            // Identify Agency (from meta path)
             // meta.source_key = "Historical/osha/severe/2024.csv"
             const parts = meta.source_key.split('/');
             
@@ -69,11 +72,18 @@ export const handler = async (event) => {
             const dataset = parts[agencyIdx + 1] || 'generic';
 
             const map = await getSextantMap(agency, dataset);
-            const cleanRecord = await normalizeAndMatch(raw, map, agency);
-
-            outputBatch.push(cleanRecord);
+            
+            // Process each row in the message
+            for (const raw of rows) {
+                try {
+                    const cleanRecord = await normalizeAndMatch(raw, map, agency);
+                    outputBatch.push(cleanRecord);
+                } catch (rowErr) {
+                    console.error("Row Processing Failed:", rowErr);
+                }
+            }
         } catch (e) {
-            console.error("Row Processing Failed:", e);
+            console.error("Message Processing Failed:", e);
         }
     }
 
