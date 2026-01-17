@@ -1,0 +1,71 @@
+{
+  "Comment": "The Sluice Pipeline: Ingests raw data from The Confluence, normalizes it via The Sextant, resolves entities via The Anchor, and deposits it into The Deep.",
+  "StartAt": "ParseRawData",
+  "States": {
+    "ParseRawData": {
+      "Type": "Task",
+      "Resource": "${SluiceParserFunctionArn}",
+      "Retry": [
+        {
+          "ErrorEquals": ["Lambda.TooManyRequestsException", "Lambda.Unknown"],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Next": "MatchEntities",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "QuarantineFailure"
+        }
+      ]
+    },
+    "MatchEntities": {
+      "Type": "Task",
+      "Resource": "${SluiceMatcherFunctionArn}",
+      "Retry": [
+        {
+          "ErrorEquals": ["DynamoDB.ProvisionedThroughputExceededException"],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 5
+        }
+      ],
+      "Next": "WriteToDeep",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "QuarantineFailure"
+        }
+      ]
+    },
+    "WriteToDeep": {
+      "Type": "Task",
+      "Resource": "${SluiceScribeFunctionArn}",
+      "Next": "SuccessState",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "QuarantineFailure"
+        }
+      ]
+    },
+    "SuccessState": {
+      "Type": "Succeed"
+    },
+    "QuarantineFailure": {
+      "Type": "Task",
+      "Resource": "${SluiceQuarantineFunctionArn}",
+      "Parameters": {
+        "error.$": "$.Error",
+        "cause.$": "$.Cause",
+        "input.$": "$"
+      },
+      "Next": "FailState"
+    },
+    "FailState": {
+      "Type": "Fail"
+    }
+  }
+}
+
