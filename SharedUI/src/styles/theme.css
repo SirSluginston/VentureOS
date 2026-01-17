@@ -1,0 +1,268 @@
+/* SharedUI v2 Theme - CSS Variables */
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Roboto:wght@300;400;500;700&display=swap');
+
+:root {
+  /* === Brand Colors (Override per-brand via JS) === */
+  --primary-color: #1a365d;      /* Brand's main color */
+  --secondary-color: #2d3748;    /* Brand's secondary */
+  --accent-color: #319795;       /* Teal - contrasting accent */
+  
+  /* === Surface Colors === */
+  --surface-light: #fafafa;      /* Light mode background */
+  --surface-dark: #1a1a2e;       /* Dark mode background */
+  --text-light: #1a1a1a;         /* Light mode text */
+  --text-dark: #f5f5f5;          /* Dark mode text */
+  
+  /* === Organization (Footer "Powered by") === */
+  --org-color: #D2691E;          /* SirSluginston burnt orange */
+  
+  /* === Semantic Colors === */
+  --success-color: #38a169;
+  --warning-color: #d69e2e;
+  --danger-color: #e53e3e;
+  --info-color: #3182ce;
+  
+  /* === Active Theme (set by JS based on mode) === */
+  --bg-color: var(--surface-light);
+  --text-color: var(--text-light);
+  --border-color: var(--secondary-color);
+  
+  /* === Typography === */
+  --font-sans: 'Roboto', system-ui, sans-serif;
+  --font-serif: 'Lora', Georgia, serif;
+  --font-mono: 'Fira Code', monospace;
+  
+  /* === Spacing (8px base) === */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 32px;
+  --space-xl: 64px;
+  
+  /* === Radius === */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  
+  /* === Shadows === */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  
+  /* === Transitions === */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 350ms ease;
+}
+
+/* === Dark Mode === */
+.dark-mode {
+  --bg-color: var(--surface-dark);
+  --text-color: var(--text-dark);
+  --border-color: var(--accent-color);
+}
+
+/* === Global Reset === */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  line-height: 1.5;
+  transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+/* === Focus States (Accessibility) === */
+:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* === Scrollbar Styling === */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--secondary-color);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color);
+}
+
+/* ============================================
+   Page Layout System
+   CSS Grid with sticky sidebars
+   ============================================ */
+
+/* Layout container - wraps sidebars + main content */
+.page-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr 280px;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  padding-top: var(--space-xl); /* Extra gap below hero */
+  max-width: 1800px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+/* Main content area */
+.page-main {
+  min-width: 0; /* Prevent grid blowout */
+}
+
+/* Left sidebar - sticky */
+.page-filters {
+  position: sticky;
+  top: 100px; /* Below navbar when scrolling */
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+/* Right sidebar - sticky */
+.page-sidebar {
+  position: sticky;
+  top: 100px; /* Below navbar when scrolling */
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Hide scrollbar but keep functionality */
+.page-sidebar::-webkit-scrollbar,
+.page-filters::-webkit-scrollbar {
+  width: 0;
+  background: transparent;
+}
+
+.page-content.with-filters {
+  padding-left: 260px;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1400px) {
+  .page-layout {
+    grid-template-columns: 180px 1fr 260px;
+  }
+  
+  .stat-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  /* Hide left sidebar, 2-column layout */
+  .page-layout {
+    grid-template-columns: 1fr 240px;
+  }
+  
+  .page-filters {
+    display: none !important;
+  }
+  
+  .stat-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 992px) {
+  /* Stack layout - single column */
+  .page-layout {
+    grid-template-columns: 1fr;
+    padding: var(--space-md);
+  }
+  
+  /* Hide sidebars - !important to override inline styles */
+  .page-sidebar,
+  .page-filters {
+    display: none !important;
+  }
+  
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-layout {
+    padding: var(--space-sm);
+    gap: var(--space-md);
+  }
+  
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Sticky bottom ad banner */
+.mobile-ad-banner {
+  display: block;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--space-sm);
+  background: var(--bg-color);
+  border-top: 2px solid var(--border-color);
+  z-index: 1000;
+  text-align: center;
+}
+
+/* Hide on desktop where we have sidebar ads */
+@media (min-width: 1201px) {
+  .mobile-ad-banner {
+    display: none;
+  }
+}
+
+/* Add padding so content doesn't hide behind banner */
+@media (max-width: 1200px) {
+  .page-layout {
+    padding-bottom: 80px;
+  }
+}
+
+/* Mobile compact info bar (optional - shows key info) */
+.mobile-info-bar {
+  display: none;
+}
+
+@media (max-width: 992px) {
+  .mobile-info-bar {
+    display: flex;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    background: var(--secondary-color);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  .mobile-info-bar > span {
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--bg-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    color: var(--text-color);
+  }
+}
