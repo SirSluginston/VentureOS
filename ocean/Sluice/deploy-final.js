@@ -1,6 +1,11 @@
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { LambdaClient, CreateFunctionCommand, UpdateFunctionCodeCommand, UpdateFunctionConfigurationCommand, GetFunctionCommand, CreateEventSourceMappingCommand } from "@aws-sdk/client-lambda";
 import AdmZip from "adm-zip";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const REGION = "us-east-1";
 const ACCOUNT_ID = "611538926352"; 
@@ -11,7 +16,7 @@ const lambda = new LambdaClient({ region: REGION });
 async function deploy() {
     console.log("🚀 Deploying Sluice Lambdas (Node 24 - ParquetJS)...");
 
-    const zipBuffer = createZip("VentureOS/ocean/Sluice");
+    const zipBuffer = createZip(__dirname);
 
     // Deploy Splitter
     await deployLambda("Sluice-Splitter", "splitter.handler", zipBuffer, {
@@ -39,12 +44,13 @@ function createZip(folder) {
     console.log("📦 Zipping code + node_modules...");
     const zip = new AdmZip();
     
-    zip.addLocalFile(`${folder}/splitter.js`);
-    zip.addLocalFile(`${folder}/processor.js`);
-    zip.addLocalFile(`${folder}/package.json`);
+    zip.addLocalFile(path.join(folder, "splitter.js"));
+    zip.addLocalFile(path.join(folder, "processor.js"));
+    zip.addLocalFile(path.join(folder, "package.json"));
     
-    if (fs.existsSync(`${folder}/node_modules`)) {
-        zip.addLocalFolder(`${folder}/node_modules`, "node_modules");
+    const nodeModulesPath = path.join(folder, "node_modules");
+    if (fs.existsSync(nodeModulesPath)) {
+        zip.addLocalFolder(nodeModulesPath, "node_modules");
     } else {
         throw new Error("❌ node_modules missing! Run npm install first.");
     }
