@@ -46,7 +46,21 @@ The Event Ocean is a serverless data lakehouse built on AWS, designed to ingest,
                             │       (S3 Tables - Silver Layer)        │
                             │                                         │
                             │         silver.events (Iceberg)         │
-                            └─────────────────────────────────────────┘
+                            └───────────────────┬─────────────────────┘
+                                                │
+                                                ▼
+                            ┌─────────────────────────────────────────┐
+                            │           THE LIGHTHOUSE                │
+                            │       (DynamoDB - Gold Layer)           │
+                            │                                         │
+                            │    Pre-aggregated views for frontend    │
+                            └───────────────────┬─────────────────────┘
+                                                │
+                                                ▼
+                                        ┌───────────────┐
+                                        │   FRONTEND    │
+                                        │  (SharedUI)   │
+                                        └───────────────┘
 ```
 
 ## The Fleet
@@ -59,6 +73,7 @@ The Event Ocean is a serverless data lakehouse built on AWS, designed to ingest,
 | **Anchor** | Entity registry (Companies, Cities) | DynamoDB |
 | **Compactor** | Bronze → Silver merge orchestration | Athena |
 | **The Deep** | Queryable Silver layer | S3 Tables (Iceberg) |
+| **Lighthouse** | Silver → Gold aggregation for frontend | Lambda, DynamoDB |
 
 ## Data Model
 
@@ -94,6 +109,7 @@ Each component has its own README with setup instructions:
 - [Sextant](./Sextant/README.md) - Schema Maps
 - [Anchor](./Anchor/README.md) - Entity Registry
 - [Compactor](./Compactor/README.md) - Merge Operations
+- [Lighthouse](./Lighthouse/README.md) - Aggregation Engine
 
 ## Tech Stack
 
