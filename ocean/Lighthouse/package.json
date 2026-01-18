@@ -1,0 +1,14 @@
+{
+  "name": "lighthouse-aggregator",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Silver to Gold aggregation Lambda for VentureOS",
+  "main": "aggregate.js",
+  "dependencies": {
+    "@aws-sdk/client-athena": "^3.x",
+    "@aws-sdk/client-dynamodb": "^3.x",
+    "@aws-sdk/util-dynamodb": "^3.x",
+    "csv-parse": "^5.5.0"
+  }
+}
+
