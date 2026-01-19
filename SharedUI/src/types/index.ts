@@ -21,7 +21,6 @@ export interface BrandConfig {
     copyrightBrand: string;
     yearCreated: number;
     poweredBy?: string;
-    links?: FooterLink[];
   };
   
   navItems: NavItem[];
@@ -60,20 +59,19 @@ export interface NavItem {
   children?: NavItem[];
 }
 
-export interface FooterLink {
-  label: string;
-  url: string;
-}
-
 // === Page Data Types ===
 export interface EntityStats {
-  totalViolations: number;
+  totalEvents: number;
+  totalCompanies?: number;
+  totalCities?: number;
+  totalStates?: number;
   totalInjuries?: number;
   totalFatalities?: number;
   totalFines?: number;
   avgFines?: number;
   score?: number;
   scoreLabel?: string;
+  lastActive?: string;
   trend?: {
     direction: 'up' | 'down' | 'flat';
     percentage: number;

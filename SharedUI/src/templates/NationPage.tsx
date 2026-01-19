@@ -10,18 +10,14 @@ import type { BrandConfig, NationPageData } from '../types';
 interface NationPageProps {
   brand: BrandConfig;
   data: NationPageData;
-  onAccountClick?: () => void;
-  onNotificationClick?: () => void;
 }
 
 export const NationPage: React.FC<NationPageProps> = ({
   brand,
   data,
-  onAccountClick,
-  onNotificationClick,
 }) => {
   const breadcrumbs = [
-    { label: 'Explore', path: '/explore' },
+    { label: 'Home', path: '/' },
     { label: data.name },
   ];
 
@@ -34,8 +30,6 @@ export const NationPage: React.FC<NationPageProps> = ({
   return (
     <Shell
       brand={brand}
-      onAccountClick={onAccountClick}
-      onNotificationClick={onNotificationClick}
     >
       <Hero
         title={data.name}
@@ -46,7 +40,7 @@ export const NationPage: React.FC<NationPageProps> = ({
 
       {/* 3-Column Layout: Filters | Main | Info */}
       <div className="page-layout">
-        <FilterSidebar showAd={true} />
+        <FilterSidebar />
 
         <main className="page-main">
           <StatGrid stats={data.stats} columns={4} />
@@ -54,12 +48,12 @@ export const NationPage: React.FC<NationPageProps> = ({
           <Directory
             title="States & Territories"
             items={data.directory}
-            basePath=""
+            basePath="/state"
             initialLimit={60}
           />
         </main>
 
-        <InfoSidebar meta={data.meta} showAd={true} />
+        <InfoSidebar meta={data.meta} />
       </div>
     </Shell>
   );

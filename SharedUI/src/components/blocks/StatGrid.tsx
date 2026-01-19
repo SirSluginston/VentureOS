@@ -51,7 +51,10 @@ export const StatGrid: React.FC<StatGridProps> = ({
   columns = 4 
 }) => {
   const statItems = [
-    { label: 'Total Incidents', value: stats.totalViolations, icon: Icons.violations },
+    { label: 'Total Events', value: stats.totalEvents, icon: Icons.violations },
+    stats.totalCompanies !== undefined && { label: 'Companies', value: stats.totalCompanies, icon: Icons.avgFine },
+    stats.totalCities !== undefined && { label: 'Cities', value: stats.totalCities, icon: Icons.avgFine },
+    stats.totalStates !== undefined && { label: 'States', value: stats.totalStates, icon: Icons.avgFine },
     stats.totalInjuries !== undefined && { label: 'Injuries', value: stats.totalInjuries, icon: Icons.injuries },
     stats.totalFatalities !== undefined && { label: 'Fatalities', value: stats.totalFatalities, icon: Icons.fatalities },
     stats.totalFines !== undefined && { label: 'Total Fines', value: formatCurrency(stats.totalFines), icon: Icons.fines },
@@ -112,7 +115,7 @@ const StatCard: React.FC<{ label: string; value: string | number; icon: React.Re
         fontFamily: 'var(--font-sans)',
         fontWeight: 700,
         fontSize: '1.5rem',
-        color: 'var(--primary-color)',
+        color: 'var(--heading-color)',
       }}>
         {typeof value === 'number' ? value.toLocaleString() : value}
       </div>

@@ -11,18 +11,15 @@ import type { BrandConfig, StatePageData } from '../types';
 interface StatePageProps {
   brand: BrandConfig;
   data: StatePageData;
-  onAccountClick?: () => void;
-  onNotificationClick?: () => void;
 }
 
 export const StatePage: React.FC<StatePageProps> = ({
   brand,
   data,
-  onAccountClick,
-  onNotificationClick,
 }) => {
   const breadcrumbs = [
-    { label: 'USA', path: '/explore' },
+    { label: 'Home', path: '/' },
+    { label: 'USA', path: '/usa' },
     { label: data.name },
   ];
 
@@ -37,8 +34,6 @@ export const StatePage: React.FC<StatePageProps> = ({
   return (
     <Shell
       brand={brand}
-      onAccountClick={onAccountClick}
-      onNotificationClick={onNotificationClick}
     >
       <Hero
         title={data.name}
@@ -49,7 +44,7 @@ export const StatePage: React.FC<StatePageProps> = ({
 
       {/* 3-Column Layout: Filters | Main | Info */}
       <div className="page-layout">
-        <FilterSidebar showAd={true} />
+        <FilterSidebar />
 
         <main className="page-main">
         <StatGrid stats={data.stats} />
@@ -57,7 +52,7 @@ export const StatePage: React.FC<StatePageProps> = ({
         <Directory
           title="Cities"
           items={data.directory}
-          basePath={`/${data.slug.toLowerCase()}`}
+          basePath="/city"
         />
 
         {/* Recent Events by Agency */}
@@ -72,7 +67,7 @@ export const StatePage: React.FC<StatePageProps> = ({
         ))}
         </main>
 
-        <InfoSidebar meta={data.meta} showAd={true} />
+        <InfoSidebar meta={data.meta} />
       </div>
     </Shell>
   );

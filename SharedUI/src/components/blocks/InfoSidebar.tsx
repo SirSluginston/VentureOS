@@ -1,17 +1,14 @@
 import React from 'react';
-import { AdSlot } from './AdSlot';
 import type { EntityMeta } from '../../types';
 
 interface InfoSidebarProps {
   meta?: EntityMeta;
-  showAd?: boolean;
 }
 
 export const InfoSidebar: React.FC<InfoSidebarProps> = ({
   meta,
-  showAd = true,
 }) => {
-  if (!meta && !showAd) return null;
+  if (!meta) return null;
 
   const infoItems = meta ? [
     meta.population && { label: 'Population', value: meta.population.toLocaleString() },
@@ -111,8 +108,8 @@ export const InfoSidebar: React.FC<InfoSidebarProps> = ({
         </div>
       )}
 
-      {/* Ad Slot */}
-      {showAd && <AdSlot position="sidebar" />}
+      {/* Ad Slot - DISABLED */}
+      {/* <AdSlot position="sidebar" /> */}
     </aside>
   );
 };

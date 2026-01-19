@@ -26,6 +26,7 @@
   --bg-color: var(--surface-light);
   --text-color: var(--text-light);
   --border-color: var(--secondary-color);
+  --heading-color: var(--primary-color);  /* Titles - switches to white in dark mode */
   
   /* === Typography === */
   --font-sans: 'Roboto', system-ui, sans-serif;
@@ -61,6 +62,7 @@
   --bg-color: var(--surface-dark);
   --text-color: var(--text-dark);
   --border-color: var(--accent-color);
+  --heading-color: var(--text-dark);  /* White headings in dark mode */
 }
 
 /* === Global Reset === */

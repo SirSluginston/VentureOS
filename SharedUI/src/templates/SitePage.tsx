@@ -10,19 +10,15 @@ import type { BrandConfig, SitePageData } from '../types';
 interface SitePageProps {
   brand: BrandConfig;
   data: SitePageData;
-  onAccountClick?: () => void;
-  onNotificationClick?: () => void;
 }
 
 export const SitePage: React.FC<SitePageProps> = ({
   brand,
   data,
-  onAccountClick,
-  onNotificationClick,
 }) => {
   const breadcrumbs = [
-    { label: 'USA', path: '/explore' },
-    { label: 'Companies', path: '/companies' },
+    { label: 'Home', path: '/' },
+    { label: 'USA', path: '/usa' },
     { label: data.companyName, path: `/company/${data.companySlug}` },
     { label: `#${data.siteId}` },
   ];
@@ -36,8 +32,6 @@ export const SitePage: React.FC<SitePageProps> = ({
   return (
     <Shell
       brand={brand}
-      onAccountClick={onAccountClick}
-      onNotificationClick={onNotificationClick}
     >
       <Hero
         title={data.name}
@@ -48,7 +42,7 @@ export const SitePage: React.FC<SitePageProps> = ({
 
       {/* 3-Column Layout: Filters | Main | Info */}
       <div className="page-layout">
-        <FilterSidebar showAd={true} />
+        <FilterSidebar />
 
         <main className="page-main">
           <StatGrid stats={data.stats} />
@@ -120,7 +114,7 @@ export const SitePage: React.FC<SitePageProps> = ({
           />
         </main>
 
-        <InfoSidebar meta={data.meta} showAd={true} />
+        <InfoSidebar meta={data.meta} />
       </div>
     </Shell>
   );

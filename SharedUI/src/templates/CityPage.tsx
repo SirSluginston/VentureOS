@@ -11,19 +11,16 @@ import type { BrandConfig, CityPageData } from '../types';
 interface CityPageProps {
   brand: BrandConfig;
   data: CityPageData;
-  onAccountClick?: () => void;
-  onNotificationClick?: () => void;
 }
 
 export const CityPage: React.FC<CityPageProps> = ({
   brand,
   data,
-  onAccountClick,
-  onNotificationClick,
 }) => {
   const breadcrumbs = [
-    { label: 'USA', path: '/explore' },
-    { label: data.stateName, path: `/${data.state.toLowerCase()}` },
+    { label: 'Home', path: '/' },
+    { label: 'USA', path: '/usa' },
+    { label: data.stateName, path: `/state/${data.state.toLowerCase()}` },
     { label: data.name },
   ];
 
@@ -39,8 +36,6 @@ export const CityPage: React.FC<CityPageProps> = ({
   return (
     <Shell
       brand={brand}
-      onAccountClick={onAccountClick}
-      onNotificationClick={onNotificationClick}
     >
       <Hero
         title={`${data.name}, ${data.state}`}
@@ -51,7 +46,7 @@ export const CityPage: React.FC<CityPageProps> = ({
 
       {/* 3-Column Layout: Filters | Main | Info */}
       <div className="page-layout">
-        <FilterSidebar showAd={true} />
+        <FilterSidebar />
 
         <main className="page-main">
           <StatGrid stats={data.stats} />
@@ -74,7 +69,7 @@ export const CityPage: React.FC<CityPageProps> = ({
           ))}
         </main>
 
-        <InfoSidebar meta={data.meta} showAd={true} />
+        <InfoSidebar meta={data.meta} />
       </div>
     </Shell>
   );

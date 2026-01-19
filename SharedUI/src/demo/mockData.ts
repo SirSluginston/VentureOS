@@ -27,12 +27,6 @@ export const oshaTrailBrand: BrandConfig = {
     copyrightBrand: 'OSHA Trail',
     yearCreated: 2024,
     poweredBy: 'SirSluginston VentureOS',
-    links: [
-      { label: 'About', url: '/about' },
-      { label: 'Privacy', url: '/privacy' },
-      { label: 'Terms', url: '/terms' },
-      { label: 'Contact', url: '/contact' },
-    ],
   },
   
   navItems: [
@@ -49,7 +43,9 @@ export const tennesseeData: StatePageData = {
   slug: 'tn',
   abbreviation: 'TN',
   stats: {
-    totalViolations: 5420,
+    totalEvents: 5420,
+    totalCities: 95,
+    totalCompanies: 1847,
     totalInjuries: 3241,
     totalFatalities: 89,
     totalFines: 12500000,
@@ -153,7 +149,8 @@ export const knoxvilleData: CityPageData = {
   state: 'TN',
   stateName: 'Tennessee',
   stats: {
-    totalViolations: 521,
+    totalEvents: 521,
+    totalCompanies: 234,
     totalInjuries: 312,
     totalFatalities: 8,
     totalFines: 1250000,
@@ -179,7 +176,7 @@ export const walmartData: CompanyPageData = {
   name: 'Walmart Inc',
   slug: 'walmart-inc',
   stats: {
-    totalViolations: 1847,
+    totalEvents: 1847,
     totalInjuries: 1203,
     totalFatalities: 12,
     totalFines: 8500000,

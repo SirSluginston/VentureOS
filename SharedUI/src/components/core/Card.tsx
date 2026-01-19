@@ -65,7 +65,7 @@ export const Card: React.FC<CardProps> = ({
               fontFamily: 'var(--font-serif)',
               fontSize: '1.25rem',
               fontWeight: 700,
-              color: 'var(--primary-color)',
+              color: 'var(--heading-color)',
             }}>
               {title}
             </h3>

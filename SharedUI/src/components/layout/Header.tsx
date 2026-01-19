@@ -5,16 +5,12 @@ interface HeaderProps {
   brand: BrandConfig;
   darkMode: boolean;
   onThemeToggle: () => void;
-  onAccountClick?: () => void;
-  onNotificationClick?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   brand,
   darkMode,
   onThemeToggle,
-  onAccountClick,
-  onNotificationClick,
 }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -121,17 +117,23 @@ export const Header: React.FC<HeaderProps> = ({
             {darkMode ? <MoonIcon /> : <SunIcon />}
           </IconButton>
 
-          {/* Notifications (desktop only, when callback provided) */}
-          {!isMobile && onNotificationClick && (
-            <IconButton onClick={onNotificationClick} label="Notifications" size={36}>
-              <BellIcon />
-            </IconButton>
-          )}
-
-          {/* Account */}
-          <IconButton onClick={onAccountClick} label="Account" size={40}>
+          {/* Account - always links to /account */}
+          <a href="/account" aria-label="Account" style={{
+            width: 40,
+            height: 40,
+            borderRadius: 'var(--radius-full)',
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'background var(--transition-fast)',
+            color: 'var(--surface-light)',
+            textDecoration: 'none',
+          }}>
             <UserIcon />
-          </IconButton>
+          </a>
         </div>
       </div>
 
@@ -187,95 +189,167 @@ const NavItemButton: React.FC<{
   isActive: boolean;
   onHover: (label: string | null) => void;
   onLeave: () => void;
-}> = ({ item, isActive, onHover, onLeave }) => (
-  <div
-    onMouseEnter={() => item.children && onHover(item.label)}
-    onMouseLeave={onLeave}
-    style={{ position: 'relative' }}
-  >
-    <button
-      onClick={item.onClick}
-      style={{
-        background: 'none',
-        border: 'none',
-        color: 'var(--surface-light)',
-        cursor: 'pointer',
-        fontFamily: 'var(--font-sans)',
-        fontWeight: 500,
-        fontSize: '0.9rem',
-        padding: 'var(--space-xs) var(--space-sm)',
-        borderRadius: 'var(--radius-sm)',
-        transition: 'background var(--transition-fast)',
-      }}
-      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
-      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+}> = ({ item, isActive, onHover, onLeave }) => {
+  const handleClick = () => {
+    if (item.onClick) {
+      item.onClick();
+    } else if (item.path) {
+      window.location.href = item.path;
+    }
+  };
+
+  return (
+    <div
+      onMouseEnter={() => item.children && onHover(item.label)}
+      onMouseLeave={onLeave}
+      style={{ position: 'relative' }}
     >
-      {item.label} {item.children && '▾'}
+      {item.path && !item.onClick && !item.children ? (
+        <a
+          href={item.path}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--surface-light)',
+            cursor: 'pointer',
+            fontFamily: 'var(--font-sans)',
+            fontWeight: 500,
+            fontSize: '0.9rem',
+            padding: 'var(--space-xs) var(--space-sm)',
+            borderRadius: 'var(--radius-sm)',
+            transition: 'background var(--transition-fast)',
+            textDecoration: 'none',
+            display: 'inline-block',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          {item.label}
+        </a>
+      ) : (
+        <button
+          onClick={handleClick}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--surface-light)',
+            cursor: 'pointer',
+            fontFamily: 'var(--font-sans)',
+            fontWeight: 500,
+            fontSize: '0.9rem',
+            padding: 'var(--space-xs) var(--space-sm)',
+            borderRadius: 'var(--radius-sm)',
+            transition: 'background var(--transition-fast)',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          {item.label} {item.children && '▾'}
+        </button>
+      )}
+
+      {item.children && isActive && (
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'var(--bg-color)',
+          minWidth: 160,
+          boxShadow: 'var(--shadow-lg)',
+          borderRadius: 'var(--radius-md)',
+          padding: 'var(--space-xs) 0',
+          zIndex: 200,
+          marginTop: 4,
+        }}>
+          {item.children.map((child) => (
+            child.path ? (
+              <a
+                key={child.label}
+                href={child.path}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: 'var(--space-sm) var(--space-md)',
+                  border: 'none',
+                  background: 'none',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: '0.9rem',
+                  color: 'var(--text-color)',
+                  transition: 'background var(--transition-fast)',
+                  textDecoration: 'none',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--secondary-color)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                {child.label}
+              </a>
+            ) : (
+              <button
+                key={child.label}
+                onClick={child.onClick}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: 'var(--space-sm) var(--space-md)',
+                  border: 'none',
+                  background: 'none',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: '0.9rem',
+                  color: 'var(--text-color)',
+                  transition: 'background var(--transition-fast)',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--secondary-color)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                {child.label}
+              </button>
+            )
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const MobileNavItem: React.FC<{ item: NavItem; onClose: () => void }> = ({ item, onClose }) => {
+  const baseStyle = {
+    display: 'block',
+    width: '100%',
+    padding: 'var(--space-sm) var(--space-md)',
+    border: 'none',
+    background: 'none',
+    textAlign: 'left' as const,
+    cursor: 'pointer',
+    fontFamily: 'var(--font-sans)',
+    fontWeight: 500,
+    fontSize: '0.95rem',
+    color: 'var(--text-color)',
+    borderRadius: 'var(--radius-sm)',
+    textDecoration: 'none',
+  };
+
+  if (item.path && !item.onClick) {
+    return (
+      <a href={item.path} style={baseStyle} onClick={onClose}>
+        {item.label}
+      </a>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => { item.onClick?.(); onClose(); }}
+      style={baseStyle}
+    >
+      {item.label}
     </button>
-
-    {item.children && isActive && (
-      <div style={{
-        position: 'absolute',
-        top: '100%',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        backgroundColor: 'var(--bg-color)',
-        minWidth: 160,
-        boxShadow: 'var(--shadow-lg)',
-        borderRadius: 'var(--radius-md)',
-        padding: 'var(--space-xs) 0',
-        zIndex: 200,
-        marginTop: 4,
-      }}>
-        {item.children.map((child) => (
-          <button
-            key={child.label}
-            onClick={child.onClick}
-            style={{
-              display: 'block',
-              width: '100%',
-              padding: 'var(--space-sm) var(--space-md)',
-              border: 'none',
-              background: 'none',
-              textAlign: 'left',
-              cursor: 'pointer',
-              fontFamily: 'var(--font-sans)',
-              fontSize: '0.9rem',
-              color: 'var(--text-color)',
-              transition: 'background var(--transition-fast)',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--secondary-color)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            {child.label}
-          </button>
-        ))}
-      </div>
-    )}
-  </div>
-);
-
-const MobileNavItem: React.FC<{ item: NavItem; onClose: () => void }> = ({ item, onClose }) => (
-  <button
-    onClick={() => { item.onClick?.(); onClose(); }}
-    style={{
-      display: 'block',
-      width: '100%',
-      padding: 'var(--space-sm) var(--space-md)',
-      border: 'none',
-      background: 'none',
-      textAlign: 'left',
-      cursor: 'pointer',
-      fontFamily: 'var(--font-sans)',
-      fontWeight: 500,
-      fontSize: '0.95rem',
-      color: 'var(--text-color)',
-      borderRadius: 'var(--radius-sm)',
-    }}
-  >
-    {item.label}
-  </button>
-);
+  );
+};
 
 // === Icons ===
 const SunIcon = () => (
@@ -288,12 +362,6 @@ const SunIcon = () => (
 const MoonIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-  </svg>
-);
-
-const BellIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
   </svg>
 );
 

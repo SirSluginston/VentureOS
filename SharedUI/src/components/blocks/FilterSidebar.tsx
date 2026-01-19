@@ -1,13 +1,6 @@
 import React from 'react';
-import { AdSlot } from './AdSlot';
 
-interface FilterSidebarProps {
-  showAd?: boolean;
-}
-
-export const FilterSidebar: React.FC<FilterSidebarProps> = ({
-  showAd = true,
-}) => {
+export const FilterSidebar: React.FC = () => {
   return (
     <aside className="page-filters" style={{
       display: 'flex',
@@ -116,8 +109,8 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
         </div>
       </div>
 
-      {/* Ad Slot */}
-      {showAd && <AdSlot position="left-sidebar" />}
+      {/* Ad Slot - DISABLED */}
+      {/* <AdSlot position="left-sidebar" /> */}
     </aside>
   );
 };

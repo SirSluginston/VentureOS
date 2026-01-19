@@ -1,18 +1,15 @@
 import React from 'react';
-import type { FooterLink } from '../../types';
 
 interface FooterProps {
   copyrightBrand: string;
   yearCreated: number;
   poweredBy?: string;
-  links?: FooterLink[];
 }
 
 export const Footer: React.FC<FooterProps> = ({
   copyrightBrand,
   yearCreated,
   poweredBy,
-  links,
 }) => {
   const currentYear = new Date().getFullYear();
   const yearRange = yearCreated === currentYear 
@@ -22,7 +19,7 @@ export const Footer: React.FC<FooterProps> = ({
   return (
     <footer style={{
       backgroundColor: 'var(--primary-color)',
-      color: 'var(--bg-color)',
+      color: 'var(--text-dark)',
       padding: 'var(--space-lg) var(--space-xl)',
       borderTop: '4px solid var(--accent-color)',
     }}>
@@ -35,34 +32,6 @@ export const Footer: React.FC<FooterProps> = ({
         alignItems: 'center',
         textAlign: 'center',
       }}>
-        {/* Links */}
-        {links && links.length > 0 && (
-          <nav style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 'var(--space-md)',
-            justifyContent: 'center',
-          }}>
-            {links.map((link) => (
-              <a
-                key={link.label}
-                href={link.url}
-                style={{
-                  color: 'var(--bg-color)',
-                  textDecoration: 'none',
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: '0.9rem',
-                  opacity: 0.9,
-                  transition: 'opacity var(--transition-fast)',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                onMouseLeave={(e) => e.currentTarget.style.opacity = '0.9'}
-              >
-                {link.label}
-              </a>
-            ))}
-          </nav>
-        )}
 
         {/* Copyright */}
         <p style={{

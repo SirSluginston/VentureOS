@@ -11,19 +11,15 @@ import type { BrandConfig, CompanyPageData } from '../types';
 interface CompanyPageProps {
   brand: BrandConfig;
   data: CompanyPageData;
-  onAccountClick?: () => void;
-  onNotificationClick?: () => void;
 }
 
 export const CompanyPage: React.FC<CompanyPageProps> = ({
   brand,
   data,
-  onAccountClick,
-  onNotificationClick,
 }) => {
   const breadcrumbs = [
-    { label: 'USA', path: '/explore' },
-    { label: 'Companies', path: '/companies' },
+    { label: 'Home', path: '/' },
+    { label: 'USA', path: '/usa' },
     { label: data.name },
   ];
 
@@ -38,8 +34,6 @@ export const CompanyPage: React.FC<CompanyPageProps> = ({
   return (
     <Shell
       brand={brand}
-      onAccountClick={onAccountClick}
-      onNotificationClick={onNotificationClick}
     >
       <Hero
         title={data.name}
@@ -50,7 +44,7 @@ export const CompanyPage: React.FC<CompanyPageProps> = ({
 
       {/* 3-Column Layout: Filters | Main | Info */}
       <div className="page-layout">
-        <FilterSidebar showAd={true} />
+        <FilterSidebar />
 
         <main className="page-main">
           <StatGrid stats={data.stats} />
@@ -60,7 +54,7 @@ export const CompanyPage: React.FC<CompanyPageProps> = ({
             <Directory
               title="Locations"
               items={data.sites!}
-              basePath={`/company/${data.slug}/site`}
+              basePath="/site"
             />
           )}
 
@@ -73,7 +67,7 @@ export const CompanyPage: React.FC<CompanyPageProps> = ({
           />
         </main>
 
-        <InfoSidebar meta={data.meta} showAd={true} />
+        <InfoSidebar meta={data.meta} />
       </div>
     </Shell>
   );
