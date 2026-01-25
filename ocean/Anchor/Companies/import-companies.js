@@ -38,26 +38,27 @@ const extractShareType = (rawName) => {
     for (const type of shareTypes) {
         if (rawName.includes(type)) return type;
     }
-    return "Common Stock"; 
+    return "Common Stock";
 };
 
 const slugify = (text) => {
     return text.toString().toLowerCase()
-        .replace(/\s+/g, '-')           
-        .replace(/[^\w\-]+/g, '')       
-        .replace(/\-\-+/g, '-')         
-        .replace(/^-+/, '')             
-        .replace(/-+$/, '');            
+        .replace(/\./g, '-')            // Replace dots with hyphens FIRST
+        .replace(/\s+/g, '-')           // Replace spaces with hyphens
+        .replace(/[^\w\-]+/g, '')       // Remove non-word chars except hyphens
+        .replace(/\-\-+/g, '-')         // Collapse multiple hyphens
+        .replace(/^-+/, '')             // Trim leading hyphens
+        .replace(/-+$/, '');            // Trim trailing hyphens
 };
 
 const parseCSVLine = (line) => {
     const result = [];
     let current = '';
     let inQuote = false;
-    
+
     for (let i = 0; i < line.length; i++) {
         const char = line[i];
-        
+
         if (char === '"') {
             inQuote = !inQuote;
         } else if (char === ',' && !inQuote) {
@@ -67,7 +68,7 @@ const parseCSVLine = (line) => {
             current += char;
         }
     }
-    result.push(current); 
+    result.push(current);
     return result.map(c => c.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
 };
 
@@ -94,7 +95,7 @@ async function importCompanies() {
         lineCount++;
         let cleanLine = line;
         if (lineCount === 1) cleanLine = cleanLine.replace(/^\uFEFF/, '');
-        
+
         if (!cleanLine.trim()) continue;
 
         const values = parseCSVLine(cleanLine);
@@ -124,10 +125,10 @@ async function importCompanies() {
 
         const symbol = values[idxSymbol]?.trim();
         const rawName = values[idxName]?.trim();
-        
+
         if (!symbol || !rawName) {
             skippedCount++;
-            continue; 
+            continue;
         }
 
         const cleanName = cleanCompanyName(rawName);
@@ -143,12 +144,12 @@ async function importCompanies() {
                 country: clean(values[idxCountry]),
                 market_cap: clean(values[idxMarketCap]),
                 ipo_year: clean(values[idxIpoYear]),
-                tickers: {} 
+                tickers: {}
             });
         }
 
         const company = companyMap.get(slug);
-        
+
         company.tickers[symbol] = {
             type: shareType,
             raw_name: rawName,
@@ -156,9 +157,9 @@ async function importCompanies() {
             net_change: clean(values[idxNetChange]),
             pct_change: clean(values[idxPctChange]),
             volume: clean(values[idxVolume]),
-            market_cap: clean(values[idxMarketCap]) 
+            market_cap: clean(values[idxMarketCap])
         };
-        
+
         if (!company.sector && values[idxSector]) company.sector = clean(values[idxSector]);
         if (!company.market_cap && values[idxMarketCap]) company.market_cap = clean(values[idxMarketCap]);
     }
@@ -170,7 +171,7 @@ async function importCompanies() {
 
     for (const [slug, co] of companyMap) {
         const pk = `SLUG#${slug}`;
-        
+
         const mainItem = {
             PK: pk,
             SK: 'METADATA',
@@ -181,14 +182,15 @@ async function importCompanies() {
             country: co.country,
             market_cap: co.market_cap,
             ipo_year: co.ipo_year,
-            tickers: co.tickers, 
-            primary_ticker: Object.keys(co.tickers)[0] 
+            tickers: co.tickers,
+            primary_ticker: Object.keys(co.tickers)[0]
         };
 
         allRequests.push({
             PutRequest: { Item: marshall(mainItem, { removeUndefinedValues: true }) }
         });
 
+        // Create ticker aliases (e.g., ALIAS#amzn -> amazon-com-inc)
         for (const [symbol, info] of Object.entries(co.tickers)) {
             const aliasItem = {
                 PK: `ALIAS#${symbol.toLowerCase()}`,
@@ -201,17 +203,26 @@ async function importCompanies() {
             };
             allRequests.push({ PutRequest: { Item: marshall(aliasItem) } });
         }
-        
-        if (slugify(co.name) !== slug) {
-             const aliasName = {
-                PK: `ALIAS#${slugify(co.name)}`,
+
+        // Create cleaned company name alias for matching (e.g., ALIAS#amazon -> amazon-com-inc)
+        // Strip common suffixes like inc, corp, llc, .com for better fuzzy matching
+        const cleanedForAlias = co.name.toLowerCase()
+            .replace(/\.com\b/gi, '')       // Remove .com
+            .replace(/\b(inc\.?|corp\.?|llc|co\.?|ltd\.?|corporation|incorporated|company)\b/gi, '')
+            .replace(/[^a-z0-9\s]/g, '')     // Remove special chars
+            .replace(/\s+/g, ' ')            // Normalize spaces
+            .trim();
+
+        if (cleanedForAlias && cleanedForAlias !== slug) {
+            const cleanedAlias = {
+                PK: `ALIAS#${cleanedForAlias.replace(/\s+/g, '')}`,  // No spaces: "amazon" not "amazon "
                 SK: pk,
-                GSI1PK: `ALIAS#${slugify(co.name)}`,
+                GSI1PK: `ALIAS#${cleanedForAlias.replace(/\s+/g, '')}`,
                 GSI1SK: pk,
                 type: 'Alias',
                 target: pk
             };
-            allRequests.push({ PutRequest: { Item: marshall(aliasName) } });
+            allRequests.push({ PutRequest: { Item: marshall(cleanedAlias) } });
         }
     }
 

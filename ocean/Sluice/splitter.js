@@ -6,7 +6,7 @@ import { Readable } from "stream";
 const s3 = new S3Client({});
 const sqs = new SQSClient({});
 
-const PROCESSING_QUEUE_URL = process.env.PROCESSING_QUEUE_URL; 
+const PROCESSING_QUEUE_URL = process.env.PROCESSING_QUEUE_URL;
 
 export const handler = async (event) => {
     console.log("🌊 Sluice Splitter: Incoming Wave...");
@@ -33,7 +33,7 @@ const MESSAGES_PER_BATCH = 10; // SQS max is 10 messages per batch
 
 async function processFile(bucket, key) {
     // 1. Guard against Recursion (Ignore output files)
-    if (key.startsWith("staging/") || key.endsWith(".parquet") || key.endsWith(".json")) {
+    if (key.startsWith("reef/") || key.endsWith(".parquet") || key.endsWith(".json")) {
         console.log(`Skipping output file: ${key}`);
         return;
     }
@@ -51,7 +51,7 @@ async function processFile(bucket, key) {
         columns: true,
         skip_empty_lines: true,
         trim: true,
-        relax_column_count: true 
+        relax_column_count: true
     }));
 
     let rowBuffer = [];      // Accumulate rows for one SQS message
@@ -85,7 +85,7 @@ async function processFile(bucket, key) {
             if (sqsBatch.length >= MESSAGES_PER_BATCH) {
                 await sendBatch(sqsBatch);
                 sqsBatch = [];
-                
+
                 // Progress log every 10k rows
                 if (rowCount % 10000 < ROWS_PER_MESSAGE * MESSAGES_PER_BATCH) {
                     console.log(`📊 Progress: ${rowCount.toLocaleString()} rows processed`);
@@ -119,6 +119,6 @@ async function sendBatch(entries) {
         }));
     } catch (e) {
         console.error("SQS Batch Send Failed:", e);
-        throw e; 
+        throw e;
     }
 }

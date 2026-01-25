@@ -4,6 +4,7 @@
   "type": "module",
   "dependencies": {
     "@aws-sdk/client-cloudformation": "^3.731.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.971.0",
     "@aws-sdk/client-dynamodb": "^3.731.0",
     "@aws-sdk/client-iam": "^3.971.0",
     "@aws-sdk/client-lambda": "^3.731.0",

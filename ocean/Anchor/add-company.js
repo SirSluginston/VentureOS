@@ -86,3 +86,4 @@ const [companyName, slug, ...aliases] = args;
 addCompany(companyName, slug, aliases);
 
 
+
