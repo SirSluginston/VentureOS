@@ -1,0 +1,7 @@
+ID,EventDate,Employer,City,State,Nature,Hospitalized,Amputation,Final Narrative
+1,01/15/2025,Test Company Inc,Denver,Colorado,Fractures,1,0,Worker fell from ladder and fractured arm at Denver facility.
+2,01/16/2025,Walmart #1234,Nashville,Tennessee,Amputations,0,1,Employee suffered finger amputation while operating machinery.
+3,01/17/2025,ABC Manufacturing LLC,Austin,Texas,Burns,2,0,Two workers burned during welding accident at Austin plant.
+4,01/18/2025,Big Corp,Phoenix,Arizona,Crush Injuries,1,0,Forklift accident resulted in crush injury to worker's leg.
+5,01/19/2025,Local Shop Co,Denver,Colorado,Lacerations,1,0,Worker lacerated hand on unguarded equipment in Denver.
+
