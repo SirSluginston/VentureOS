@@ -8,6 +8,20 @@ import { InfoSidebar } from '../components/blocks/InfoSidebar';
 import { FilterSidebar } from '../components/blocks/FilterSidebar';
 import type { BrandConfig, CityPageData } from '../types';
 
+const STATE_NAMES: Record<string, string> = {
+  "AL": "Alabama", "AK": "Alaska", "AZ": "Arizona", "AR": "Arkansas", "CA": "California",
+  "CO": "Colorado", "CT": "Connecticut", "DE": "Delaware", "FL": "Florida", "GA": "Georgia",
+  "HI": "Hawaii", "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "IA": "Iowa",
+  "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana", "ME": "Maine", "MD": "Maryland",
+  "MA": "Massachusetts", "MI": "Michigan", "MN": "Minnesota", "MS": "Mississippi", "MO": "Missouri",
+  "MT": "Montana", "NE": "Nebraska", "NV": "Nevada", "NH": "New Hampshire", "NJ": "New Jersey",
+  "NM": "New Mexico", "NY": "New York", "NC": "North Carolina", "ND": "North Dakota", "OH": "Ohio",
+  "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode Island", "SC": "South Carolina",
+  "SD": "South Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VT": "Vermont",
+  "VA": "Virginia", "WA": "Washington", "WV": "West Virginia", "WI": "Wisconsin", "WY": "Wyoming",
+  "DC": "District of Columbia", "PR": "Puerto Rico", "VI": "Virgin Islands", "GU": "Guam"
+};
+
 interface CityPageProps {
   brand: BrandConfig;
   data: CityPageData;
@@ -17,10 +31,14 @@ export const CityPage: React.FC<CityPageProps> = ({
   brand,
   data,
 }) => {
+  // Extract state abbreviation from slug (e.g., "tx-austin" -> "TX")
+  const stateAbbrev = data.slug?.split('-')[0]?.toUpperCase() || data.state;
+  const stateName = STATE_NAMES[stateAbbrev] || stateAbbrev;
+
   const breadcrumbs = [
     { label: 'Home', path: '/' },
     { label: 'USA', path: '/usa' },
-    { label: data.stateName, path: `/state/${data.state.toLowerCase()}` },
+    { label: stateName, path: `/state/${stateAbbrev.toLowerCase()}` },
     { label: data.name },
   ];
 
@@ -38,7 +56,7 @@ export const CityPage: React.FC<CityPageProps> = ({
       brand={brand}
     >
       <Hero
-        title={`${data.name}, ${data.state}`}
+        title={data.name}
         subtitle={`Worker safety data for ${data.name}`}
         breadcrumbs={breadcrumbs}
         score={scoreInfo}
@@ -50,7 +68,7 @@ export const CityPage: React.FC<CityPageProps> = ({
 
         <main className="page-main">
           <StatGrid stats={data.stats} />
-          
+
           <Directory
             title="Companies"
             items={data.directory}

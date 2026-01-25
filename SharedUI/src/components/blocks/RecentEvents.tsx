@@ -60,9 +60,9 @@ export const RecentEvents: React.FC<RecentEventsProps> = ({
           gap: 'var(--space-sm)',
         }}>
           {events.map((event) => (
-            <EventCard 
-              key={event.eventId} 
-              event={event} 
+            <EventCard
+              key={event.eventId}
+              event={event}
               showAgencyBadge={showAgencyBadge}
             />
           ))}
@@ -72,9 +72,9 @@ export const RecentEvents: React.FC<RecentEventsProps> = ({
   );
 };
 
-const EventCard: React.FC<{ event: RecentEvent; showAgencyBadge: boolean }> = ({ 
-  event, 
-  showAgencyBadge 
+const EventCard: React.FC<{ event: RecentEvent; showAgencyBadge: boolean }> = ({
+  event,
+  showAgencyBadge
 }) => (
   <div style={{
     padding: 'var(--space-md) var(--space-lg)',
@@ -165,13 +165,13 @@ const EventCard: React.FC<{ event: RecentEvent; showAgencyBadge: boolean }> = ({
             style={{
               fontFamily: 'var(--font-sans)',
               fontSize: '0.85rem',
-              color: 'var(--primary-color)',
+              color: 'var(--accent-color)',
               textDecoration: 'none',
               fontWeight: 600,
               transition: 'color var(--transition-fast)',
             }}
-            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-color)'}
-            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--primary-color)'}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--primary-color)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--accent-color)'}
           >
             {event.companyName} →
           </a>
